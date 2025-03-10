@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idle RPG Battle Game</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header class="mb-4 text-center">
+      <h1 class="mt-4">Idle RPG Battle Game</h1>
+    </header>
+
+    <!-- Authentication Section -->
+    <div id="auth-section" class="card mb-4">
+      <div class="card-body">
+        <ul class="nav nav-tabs" id="auth-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab" aria-controls="login" aria-selected="true">Login</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button" role="tab" aria-controls="register" aria-selected="false">Register</button>
+          </li>
+        </ul>
+        <div class="tab-content mt-3" id="auth-tabs-content">
+          <div class="tab-pane fade show active" id="login" role="tabpanel" aria-labelledby="login-tab">
+            <form id="login-form">
+              <div class="mb-3">
+                <label for="login-username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="login-username" required>
+              </div>
+              <div class="mb-3">
+                <label for="login-password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="login-password" required>
+              </div>
+              <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+          </div>
+          <div class="tab-pane fade" id="register" role="tabpanel" aria-labelledby="register-tab">
+            <form id="register-form">
+              <div class="mb-3">
+                <label for="register-username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="register-username" required>
+              </div>
+              <div class="mb-3">
+                <label for="register-password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="register-password" required>
+              </div>
+              <button type="submit" class="btn btn-primary">Register</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Content Section (Hidden until logged in) -->
+    <div id="game-content" class="d-none">
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="d-flex justify-content-between align-items-center">
+            <h2>My Characters</h2>
+            <div>
+              <button id="create-character-btn" class="btn btn-success">Create New Character</button>
+              <button id="logout-btn" class="btn btn-outline-danger">Logout</button>
+            </div>
+          </div>
+          <div id="characters-list" class="mt-3">
+            <!-- Characters will be listed here -->
+            <div class="alert alert-info">No characters yet. Create one to get started!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Character Details -->
+      <div id="character-details" class="card mb-4 d-none">
+        <div class="card-header">
+          <ul class="nav nav-tabs card-header-tabs" id="character-tabs" role="tablist">
+            
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button" role="tab" aria-controls="stats" aria-selected="true">Stats</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="rotation-tab" data-bs-toggle="tab" data-bs-target="#rotation" type="button" role="tab" aria-controls="rotation" aria-selected="false">Rotation</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="battles-tab" data-bs-toggle="tab" data-bs-target="#battles" type="button" role="tab" aria-controls="battles" aria-selected="false">Battles</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="challenge-tab" data-bs-toggle="tab" data-bs-target="#challenge" type="button" role="tab" aria-controls="challenge" aria-selected="false">Challenge</button>
+            </li>
+          </ul>
+        </div>
+        <div class="card-body">
+          <div class="tab-content" id="character-tabs-content">
+            <!-- Stats Tab -->
+<!-- Stats Tab -->
+<div class="tab-pane fade show active" id="stats" role="tabpanel" aria-labelledby="stats-tab">
+  <h3 id="character-name"></h3>
+  
+  <!-- Experience Section -->
+  <div id="experience-container" class="mb-3">
+    <div class="d-flex justify-content-between">
+      <h5>Level <span id="character-level">1</span></h5>
+      <span id="experience-text">0 / 100 XP</span>
+    </div>
+    <div class="progress" style="height: 10px;">
+      <div id="experience-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%" 
+        aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+  </div>
+
+  <!-- Available Points Alert -->
+  <div id="available-points-container" class="mb-3 d-none">
+    <div class="alert alert-info">
+      <h5>Available Attribute Points: <span id="available-points">0</span></h5>
+      <p>Allocate these points to improve your character's abilities.</p>
+    </div>
+  </div>
+  
+  <div class="row">
+    <div class="col-md-6">
+      <h4>Attributes</h4>
+      <ul class="list-group">
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Strength
+          <span id="attr-strength" class="badge bg-primary rounded-pill">0</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Agility
+          <span id="attr-agility" class="badge bg-primary rounded-pill">0</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Stamina
+          <span id="attr-stamina" class="badge bg-primary rounded-pill">0</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Intellect
+          <span id="attr-intellect" class="badge bg-primary rounded-pill">0</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Wisdom
+          <span id="attr-wisdom" class="badge bg-primary rounded-pill">0</span>
+        </li>
+      </ul>
+    </div>
+    
+    <!-- Attribute Adjustment Controls -->
+    <div class="col-md-6">
+      <h4>Adjust Attributes</h4>
+      <div class="mb-3">
+        <label for="update-strength" class="form-label">Strength</label>
+        <div class="input-group">
+          <button class="btn btn-outline-secondary attribute-update-dec update-attribute" type="button" data-attribute="strength" disabled>-</button>
+          <input type="number" class="form-control attribute-update-input" id="update-strength" value="1" min="1" data-attribute="strength" readonly>
+          <button class="btn btn-outline-secondary attribute-update-inc update-attribute" type="button" data-attribute="strength" disabled>+</button>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="update-agility" class="form-label">Agility</label>
+        <div class="input-group">
+          <button class="btn btn-outline-secondary attribute-update-dec update-attribute" type="button" data-attribute="agility" disabled>-</button>
+          <input type="number" class="form-control attribute-update-input" id="update-agility" value="1" min="1" data-attribute="agility" readonly>
+          <button class="btn btn-outline-secondary attribute-update-inc update-attribute" type="button" data-attribute="agility" disabled>+</button>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="update-stamina" class="form-label">Stamina</label>
+        <div class="input-group">
+          <button class="btn btn-outline-secondary attribute-update-dec update-attribute" type="button" data-attribute="stamina" disabled>-</button>
+          <input type="number" class="form-control attribute-update-input" id="update-stamina" value="1" min="1" data-attribute="stamina" readonly>
+          <button class="btn btn-outline-secondary attribute-update-inc update-attribute" type="button" data-attribute="stamina" disabled>+</button>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="update-intellect" class="form-label">Intellect</label>
+        <div class="input-group">
+          <button class="btn btn-outline-secondary attribute-update-dec update-attribute" type="button" data-attribute="intellect" disabled>-</button>
+          <input type="number" class="form-control attribute-update-input" id="update-intellect" value="1" min="1" data-attribute="intellect" readonly>
+          <button class="btn btn-outline-secondary attribute-update-inc update-attribute" type="button" data-attribute="intellect" disabled>+</button>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="update-wisdom" class="form-label">Wisdom</label>
+        <div class="input-group">
+          <button class="btn btn-outline-secondary attribute-update-dec update-attribute" type="button" data-attribute="wisdom" disabled>-</button>
+          <input type="number" class="form-control attribute-update-input" id="update-wisdom" value="1" min="1" data-attribute="wisdom" readonly>
+          <button class="btn btn-outline-secondary attribute-update-inc update-attribute" type="button" data-attribute="wisdom" disabled>+</button>
+        </div>
+      </div>
+      <button id="save-attributes-btn" class="btn btn-primary" disabled>Save Attributes</button>
+    </div>
+  </div>
+  
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <h4>Derived Stats</h4>
+      <ul class="list-group">
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Health
+          <span id="stat-health" class="badge bg-danger rounded-pill">0</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Mana
+          <span id="stat-mana" class="badge bg-info rounded-pill">0</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Physical Damage
+          <span id="stat-physical-damage" class="badge bg-warning rounded-pill">0</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Magic Damage
+          <span id="stat-magic-damage" class="badge bg-primary rounded-pill">0</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Attack Speed
+          <span id="stat-attack-speed" class="badge bg-success rounded-pill">0</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Crit Chance
+          <span id="stat-crit-chance" class="badge bg-warning rounded-pill">0</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Spell Crit Chance
+          <span id="stat-spell-crit" class="badge bg-info rounded-pill">0</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Physical Damage Reduction
+          <span id="stat-physical-reduction" class="badge bg-secondary rounded-pill">0</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Magic Damage Reduction
+          <span id="stat-magic-reduction" class="badge bg-secondary rounded-pill">0</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+  
+  <!-- Add this after the existing Derived Stats section in index.html -->
+<div class="row mt-4">
+  <div class="col-md-12">
+    <h4>Advanced Combat Stats</h4>
+    <ul class="list-group" id="additional-stats-container">
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        Dodge Chance
+        <span id="stat-dodge" class="badge bg-info rounded-pill">0%</span>
+      </li>
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        Accuracy
+        <span id="stat-accuracy" class="badge bg-primary rounded-pill">90%</span>
+      </li>
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        Block Chance
+        <span id="stat-block" class="badge bg-secondary rounded-pill">0%</span>
+      </li>
+    </ul>
+    <div class="mt-3">
+      <small class="text-muted">
+        <i class="bi bi-info-circle"></i> 
+        Dodge allows you to avoid attacks completely. Accuracy counters dodge. 
+        Block reduces physical damage by 50% when successful.
+      </small>
+    </div>
+  </div>
+</div>
+</div>
+            
+<!-- Rotation Tab -->
+<!-- Rotation Tab -->
+<div class="tab-pane fade" id="rotation" role="tabpanel" aria-labelledby="rotation-tab">
+  <div class="mb-3">
+    <label for="attack-type" class="form-label">Basic Attack Type</label>
+    <select class="form-select" id="attack-type">
+      <option value="physical">Physical</option>
+      <option value="magic">Magic</option>
+    </select>
+  </div>
+  <div class="mb-4">
+    <h4>Available Abilities</h4>
+    <p>Drag abilities to set your rotation. Your character will use abilities in this order.</p>
+    <div id="available-abilities" class="custom-scrollbar mb-4">
+      <!-- Available abilities will be listed here -->
+    </div>
+    
+    <h4>Character Rotation</h4>
+    <div id="rotation-list" class="custom-scrollbar mb-3">
+      <div class="alert alert-info">Drag abilities here to set your rotation.</div>
+    </div>
+    <button id="save-rotation-btn" class="btn btn-primary">Save Rotation</button>
+  </div>
+</div>
+<!-- Challenge tab -->
+<div class="tab-pane fade" id="challenge" role="tabpanel" aria-labelledby="challenge-tab">
+  <h4>Challenge Mode</h4>
+  <p>Test your character against increasingly difficult AI opponents. How far can you go?</p>
+  
+  <div id="challenge-section" class="card mb-3 d-none">
+    <div class="card-header">
+      <h5>Challenge Status</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <h6>Current Round</h6>
+            <p class="h3"><span id="challenge-round">1</span></p>
+          </div>
+          <div class="mb-3">
+            <h6>Experience Gained</h6>
+            <p class="h3"><span id="challenge-exp-gained">0</span> XP</p>
+          </div>
+          <div class="mb-3">
+            <button id="start-challenge-btn" class="btn btn-primary">Start New Challenge</button>
+            <button id="continue-challenge-btn" class="btn btn-success">Continue Challenge</button>
+            <button id="collect-exp-btn" class="btn btn-warning d-none">Collect Experience</button>
+            <button id="reset-challenge-btn" class="btn btn-danger">Reset Challenge</button>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div id="challenge-opponent-info" class="card border-danger">
+            <div class="card-header">
+              <h6>Current Opponent</h6>
+            </div>
+            <div class="card-body">
+              <h5 id="challenge-opponent-name">Opponent Name</h5>
+              <p class="mb-1">Level <span id="challenge-opponent-level">1</span></p>
+              <p id="challenge-opponent-attributes" class="small text-muted">
+                STR: 0 | AGI: 0 | STA: 0 | INT: 0 | WIS: 0
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="alert alert-info">
+    <p><strong>How Challenge Mode Works:</strong></p>
+    <ul>
+      <li>Each round, your character will face an opponent that adapts to your play style.</li>
+      <li>With each victory, the opponents become stronger as they learn your weaknesses.</li>
+      <li>Your character's health and mana do not reset between rounds.</li>
+      <li>Experience is only awarded once you collect it or if your character is defeated.</li>
+      <li>Can you reach round 10? Round 20? How far can you go?</li>
+    </ul>
+  </div>
+</div>          
+            
+            
+            
+            
+            
+            
+            <!-- Battles Tab -->
+            <div class="tab-pane fade" id="battles" role="tabpanel" aria-labelledby="battles-tab">
+              <h4>Find Opponent</h4>
+              <div id="matchmaking-section" class="card mb-3">
+                <div class="card-header">
+                  <h5>Matchmaking</h5>
+                </div>
+                <div class="card-body">
+                  <p>Find a battle against another player's character.</p>
+                  <div id="queue-status" class="alert alert-info mb-3 d-none">
+                    Searching for opponent... <span id="queue-time">0:00</span>
+                    <div class="spinner-border spinner-border-sm" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                  </div>
+                  <button id="join-queue-btn" class="btn btn-primary">Join Matchmaking Queue</button>
+                  <button id="leave-queue-btn" class="btn btn-danger d-none">Leave Queue</button>
+                </div>
+              </div>
+              
+              <h5 class="mt-4">Direct Battles</h5>
+              <p>Battle against specific opponents:</p>
+              <div id="opponents-list" class="mb-3">
+                <!-- Opponents will be listed here -->
+              </div>
+              
+              <h4>Battle History</h4>
+              <div id="battle-history" class="mb-3">
+                <!-- Battle history will be shown here -->
+                <div class="alert alert-info">No battles yet.</div>
+              </div>
+              
+              <div id="battle-details" class="card d-none">
+                <div class="card-header">
+                  <h5 id="battle-title">Battle Details</h5>
+                </div>
+                <div class="card-body">
+                  <div id="battle-log">
+                    <!-- Battle log will be shown here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Challenge Modal -->
+<!-- Add this after the Battle Modal, before the closing body tag -->
+<div class="modal fade" id="challenge-round-modal" tabindex="-1" aria-labelledby="challengeRoundModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="challenge-round-title">Challenge Round</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="challenge-round-result" class="mb-3">
+          <!-- Result will be shown here -->
+        </div>
+        <div class="card mb-3">
+          <div class="card-header">
+            <h6>Experience Gained</h6>
+          </div>
+          <div class="card-body">
+            <h3 class="text-center"><span id="challenge-round-exp">0</span> XP</h3>
+            <p class="text-center text-muted">Collect experience by clicking "Collect Experience" or continuing to the next round.</p>
+          </div>
+        </div>
+        <div class="alert alert-warning">
+          <strong>Remember:</strong> Your character's health and mana do not reset between rounds. Be careful how far you push your luck!
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Continue</button>
+      </div>
+    </div>
+  </div>
+</div>
+    <!-- Create Character Modal -->
+    <div class="modal fade" id="create-character-modal" tabindex="-1" aria-labelledby="createCharacterModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="createCharacterModalLabel">Create New Character</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="create-character-form">
+              <div class="mb-3">
+                <label for="character-name-input" class="form-label">Character Name</label>
+                <input type="text" class="form-control" id="character-name-input" required>
+              </div>
+              <h4>Attributes (Points Remaining: <span id="points-remaining">15</span>)</h4>
+              <p>Total points to distribute: 15</p>
+              <div class="mb-3">
+                <label for="character-strength" class="form-label">Strength</label>
+                <div class="input-group">
+                  <button class="btn btn-outline-secondary attribute-dec" type="button" data-attribute="strength">-</button>
+                  <input type="number" class="form-control attribute-input" id="character-strength" value="1" min="1" max="15" data-attribute="strength" readonly>
+                  <button class="btn btn-outline-secondary attribute-inc" type="button" data-attribute="strength">+</button>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="character-agility" class="form-label">Agility</label>
+                <div class="input-group">
+                  <button class="btn btn-outline-secondary attribute-dec" type="button" data-attribute="agility">-</button>
+                  <input type="number" class="form-control attribute-input" id="character-agility" value="1" min="1" max="15" data-attribute="agility" readonly>
+                  <button class="btn btn-outline-secondary attribute-inc" type="button" data-attribute="agility">+</button>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="character-stamina" class="form-label">Stamina</label>
+                <div class="input-group">
+                  <button class="btn btn-outline-secondary attribute-dec" type="button" data-attribute="stamina">-</button>
+                  <input type="number" class="form-control attribute-input" id="character-stamina" value="1" min="1" max="15" data-attribute="stamina" readonly>
+                  <button class="btn btn-outline-secondary attribute-inc" type="button" data-attribute="stamina">+</button>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="character-intellect" class="form-label">Intellect</label>
+                <div class="input-group">
+                  <button class="btn btn-outline-secondary attribute-dec" type="button" data-attribute="intellect">-</button>
+                  <input type="number" class="form-control attribute-input" id="character-intellect" value="1" min="1" max="15" data-attribute="intellect" readonly>
+                  <button class="btn btn-outline-secondary attribute-inc" type="button" data-attribute="intellect">+</button>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="character-wisdom" class="form-label">Wisdom</label>
+                <div class="input-group">
+                  <button class="btn btn-outline-secondary attribute-dec" type="button" data-attribute="wisdom">-</button>
+                  <input type="number" class="form-control attribute-input" id="character-wisdom" value="1" min="1" max="15" data-attribute="wisdom" readonly>
+                  <button class="btn btn-outline-secondary attribute-inc" type="button" data-attribute="wisdom">+</button>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" id="create-character-submit">Create Character</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Battle Modal -->
+    <div class="modal fade" id="battle-modal" tabindex="-1" aria-labelledby="battleModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="battleModalLabel">Battle</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-5 text-center">
+                <h4 id="battle-character-name">Your Character</h4>
+                <div class="progress mb-2">
+                  <div id="battle-character-health" class="progress-bar bg-danger" role="progressbar" style="width: 100%">100%</div>
+                </div>
+                <div class="progress">
+                  <div id="battle-character-mana" class="progress-bar bg-info" role="progressbar" style="width: 100%">100%</div>
+                </div>
+              </div>
+              <div class="col-md-2 text-center align-self-center">
+                <h4>VS</h4>
+              </div>
+              <div class="col-md-5 text-center">
+                <h4 id="battle-opponent-name">Opponent</h4>
+                <div class="progress mb-2">
+                  <div id="battle-opponent-health" class="progress-bar bg-danger" role="progressbar" style="width: 100%">100%</div>
+                </div>
+                <div class="progress">
+                  <div id="battle-opponent-mana" class="progress-bar bg-info" role="progressbar" style="width: 100%">100%</div>
+                </div>
+              </div>
+            </div>
+            <!-- Effect containers -->
+            <div class="row mt-2">
+              <div class="col-md-5 text-center">
+                <div class="effect-container" id="battle-character-effects"></div>
+              </div>
+              <div class="col-md-2"></div>
+              <div class="col-md-5 text-center">
+                <div class="effect-container" id="battle-opponent-effects"></div>
+              </div>
+            </div>
+            <div class="mt-4">
+              <h5>Battle Log</h5>
+              <div id="live-battle-log" class="p-3 bg-light" style="height: 300px; overflow-y: auto;">
+                <!-- Live battle log will be shown here -->
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" id="battle-modal-close" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  
+<!-- Core libraries -->
+<script src="js/core/utils.js"></script>
+<script src="js/core/event-bus.js"></script>
+<script src="js/core/api.js"></script>
+<script src="js/core/state.js"></script>
+
+<!-- Models -->
+<script src="js/models/ability.js"></script>
+<script src="js/models/character.js"></script>
+<script src="js/models/battle.js"></script>
+
+<!-- Engine -->
+<script src="js/engine/combat-calculator.js"></script>
+<script src="js/engine/effect-system.js"></script>
+<script src="js/engine/cooldown-manager.js"></script>
+<script src="js/engine/battle-engine.js"></script>
+
+<!-- UI Components -->
+<script src="js/ui/notification.js"></script>
+<script src="js/ui/character-ui.js"></script>
+<script src="js/ui/ability-ui.js"></script>
+<script src="js/ui/battle-ui.js"></script>
+<script src="js/ui/matchmaking-ui.js"></script>
+<script src="js/ui/challenge-ui.js"></script> <!-- Make sure this is here -->
+
+<!-- Controllers -->
+<script src="js/controllers/character-controller.js"></script>
+<script src="js/controllers/rotation-controller.js"></script>
+<script src="js/controllers/battle-controller.js"></script>
+<script src="js/controllers/matchmaking-controller.js"></script>
+<script src="js/controllers/challenge-controller.js"></script> <!-- Make sure this is here -->
+
+<!-- Authentication -->
+<script src="js/auth.js"></script>
+
+<!-- Main app -->
+<script src="js/app.js"></script>
+</body>
+</html>

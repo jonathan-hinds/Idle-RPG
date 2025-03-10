@@ -1,0 +1,56 @@
+[
+  {
+    "id": "5ad6cf95-f3da-4035-ab3f-20c426124c3b",
+    "username": "jdojo",
+    "password": "$2b$10$o3UFcfYyejTxSBVOYHkohOydJ4ibwd8/HyFMVpwbN7NhGL5AljKSa",
+    "createdAt": "2025-03-08T02:30:44.975Z"
+  },
+  {
+    "id": "68448a0f-ecf2-4bbc-a18f-93bafeabdac1",
+    "username": "jdojotest",
+    "password": "$2b$10$Op4mJmb0.Q9Y9Js7rZNboO4DuJ0a0yu5ssZOpI9j.DP1htY7uHMx2",
+    "createdAt": "2025-03-08T02:32:37.803Z"
+  },
+  {
+    "id": "5f811325-8cba-48a6-9cb0-90eefd4ce775",
+    "username": "jdojo1",
+    "password": "$2b$10$MWRqU.l1cd554BuutxUaA.uCtLePVA/Z0wRd2amQ/PFi3ApumsSJ.",
+    "createdAt": "2025-03-08T05:10:14.094Z"
+  },
+  {
+    "id": "538859f7-0ce7-4566-aa49-4006ffb8a2f6",
+    "username": "Test",
+    "password": "$2b$10$gffY9sLcGwYl8vLgrkhaMuZ1jDAwT0ld1.QvIurLa10CggDLAjmh2",
+    "createdAt": "2025-03-09T01:25:09.467Z"
+  },
+  {
+    "id": "b1af30b3-ae0d-456c-a470-421bbfa11b45",
+    "username": "papurumun",
+    "password": "$2b$10$OmRuhpBcHi8FpDEIIwDovOPZMpufDVIoa9Q.COE4xnQ2PPBM0QdRa",
+    "createdAt": "2025-03-09T01:30:11.655Z"
+  },
+  {
+    "id": "e63c4dfb-53e4-42c4-8ef7-0ae242f7bdfa",
+    "username": "Frannysmom",
+    "password": "$2b$10$wvXDw3X4LChfX.HUbYogue3wkcajrqO5KlMyCAqZVtjN.DNQ60FQu",
+    "createdAt": "2025-03-09T21:37:43.964Z"
+  },
+  {
+    "id": "b365a4d4-7e74-4bff-8d92-3102b40f1773",
+    "username": "Spoon",
+    "password": "$2b$10$S5vlaiyNaywk7VWwi2ojBejCMBGiYNivTyOMf0jat6P1IVyBZmq3S",
+    "createdAt": "2025-03-09T21:43:11.790Z"
+  },
+  {
+    "id": "68d29e2b-3e4f-4c9a-8d05-b5d48af9b33c",
+    "username": "Jdojo",
+    "password": "$2b$10$/r7RRQ9PbMPOOzyogsTG0.nkf8uY71B0At129KW1QcG102xZ3NZre",
+    "createdAt": "2025-03-09T21:47:52.265Z"
+  },
+  {
+    "id": "e2c5d10a-91d5-40dc-bfbf-2c7259548318",
+    "username": "Forkfork",
+    "password": "$2b$10$MEJ3Diq3x5ipmhympQc/J.m12rTla.3bS7mq7yoN0Lpjmbw8mwBOK",
+    "createdAt": "2025-03-09T21:50:02.178Z"
+  }
+]

@@ -1,0 +1,417 @@
+[
+  {
+    "id": "e76a3fa5-394a-4b96-8896-e912e03dbc7f",
+    "playerId": "5ad6cf95-f3da-4035-ab3f-20c426124c3b",
+    "name": "Narcan",
+    "attributes": {
+      "strength": 5,
+      "agility": 5,
+      "stamina": 3,
+      "intellect": 1,
+      "wisdom": 1
+    },
+    "stats": {
+      "minPhysicalDamage": 10,
+      "maxPhysicalDamage": 20,
+      "criticalChance": 10,
+      "attackSpeed": 7.5,
+      "minMagicDamage": 2,
+      "maxMagicDamage": 3.5,
+      "spellCritChance": 2,
+      "health": 130,
+      "mana": 60,
+      "physicalDamageReduction": 5.5,
+      "magicDamageReduction": 2.5
+    },
+    "rotation": [
+      "double-strike",
+      "enrage",
+      "backstab",
+      "long-shot",
+      "earth-shock"
+    ],
+    "attackType": "physical",
+    "createdAt": "2025-03-08T02:31:02.447Z",
+    "level": 1,
+    "experience": 34
+  },
+  {
+    "id": "f60630f4-9dd8-4279-9b25-ba655905bae2",
+    "playerId": "68448a0f-ecf2-4bbc-a18f-93bafeabdac1",
+    "name": "USB C",
+    "attributes": {
+      "strength": 1,
+      "agility": 3,
+      "stamina": 3,
+      "intellect": 4,
+      "wisdom": 4
+    },
+    "stats": {
+      "minPhysicalDamage": 2,
+      "maxPhysicalDamage": 6,
+      "criticalChance": 6,
+      "attackSpeed": 8.5,
+      "minMagicDamage": 8,
+      "maxMagicDamage": 14,
+      "spellCritChance": 8,
+      "health": 130,
+      "mana": 90,
+      "physicalDamageReduction": 3.5,
+      "magicDamageReduction": 5.5
+    },
+    "rotation": [
+      "ignatius-flames",
+      "enrage",
+      "earth-shock",
+      "arcane-missile",
+      "lesser-heal",
+      "mana-burn",
+      "arcane-missile"
+    ],
+    "attackType": "magic",
+    "createdAt": "2025-03-08T02:33:03.268Z",
+    "level": 1,
+    "experience": 46
+  },
+  {
+    "id": "98fd4e89-a557-47bc-835c-5e6bf8afe7d5",
+    "playerId": "5f811325-8cba-48a6-9cb0-90eefd4ce775",
+    "name": "Narcman",
+    "attributes": {
+      "strength": 7,
+      "agility": 11,
+      "stamina": 17,
+      "intellect": 1,
+      "wisdom": 1
+    },
+    "stats": {
+      "minPhysicalDamage": 29,
+      "maxPhysicalDamage": 59,
+      "criticalChance": 11.66,
+      "attackSpeed": 5.65,
+      "minMagicDamage": 3,
+      "maxMagicDamage": 6,
+      "spellCritChance": 4.27,
+      "health": 290,
+      "mana": 63,
+      "physicalDamageReduction": 17.21,
+      "magicDamageReduction": 8.03,
+      "dodgeChance": 6.41,
+      "accuracy": 65.97,
+      "blockChance": 10.95
+    },
+    "rotation": [
+      "mana-burn",
+      "skull-bash",
+      "stone-skin",
+      "enrage",
+      "long-shot",
+      "mana-burn"
+    ],
+    "attackType": "physical",
+    "createdAt": "2025-03-08T05:17:28.764Z",
+    "level": 13,
+    "experience": 378,
+    "availableAttributePoints": 2
+  },
+  {
+    "id": "12957a89-53be-4bed-a3a1-85ec553baa2a",
+    "playerId": "5f811325-8cba-48a6-9cb0-90eefd4ce775",
+    "name": "Narcman",
+    "attributes": {
+      "strength": 5,
+      "agility": 7,
+      "stamina": 5,
+      "intellect": 12,
+      "wisdom": 6
+    },
+    "stats": {
+      "minPhysicalDamage": 10,
+      "maxPhysicalDamage": 22,
+      "criticalChance": 14,
+      "attackSpeed": 6.5,
+      "minMagicDamage": 24,
+      "maxMagicDamage": 33,
+      "spellCritChance": 24,
+      "health": 150,
+      "mana": 110,
+      "physicalDamageReduction": 7.5,
+      "magicDamageReduction": 8.5
+    },
+    "rotation": [
+      "long-shot",
+      "enrage",
+      "ignatius-flames",
+      "arcane-missile",
+      "mana-burn",
+      "backstab",
+      "double-strike"
+    ],
+    "attackType": "physical",
+    "createdAt": "2025-03-08T05:18:11.449Z",
+    "level": 11,
+    "experience": 364,
+    "availableAttributePoints": 0
+  },
+  {
+    "id": "db74d0e5-27b5-46b9-9b40-57e91f6fb2c9",
+    "playerId": "538859f7-0ce7-4566-aa49-4006ffb8a2f6",
+    "name": "BIGWIENER",
+    "attributes": {
+      "strength": 7,
+      "agility": 5,
+      "stamina": 15,
+      "intellect": 1,
+      "wisdom": 1
+    },
+    "stats": {
+      "minPhysicalDamage": 14,
+      "maxPhysicalDamage": 26,
+      "criticalChance": 10,
+      "attackSpeed": 7.5,
+      "minMagicDamage": 2,
+      "maxMagicDamage": 3.5,
+      "spellCritChance": 2,
+      "health": 250,
+      "mana": 60,
+      "physicalDamageReduction": 18.5,
+      "magicDamageReduction": 8.5
+    },
+    "rotation": [
+      "earth-shock",
+      "ignatius-flames",
+      "stone-skin",
+      "enrage",
+      "mana-burn",
+      "long-shot"
+    ],
+    "attackType": "physical",
+    "createdAt": "2025-03-09T01:26:00.124Z",
+    "level": 9,
+    "experience": 173,
+    "availableAttributePoints": 2
+  },
+  {
+    "id": "412fec30-0a8a-42b4-94e2-c6b2073c7fe4",
+    "playerId": "b1af30b3-ae0d-456c-a470-421bbfa11b45",
+    "name": "Sykoflexxer the One",
+    "attributes": {
+      "strength": 1,
+      "agility": 7,
+      "stamina": 2,
+      "intellect": 12,
+      "wisdom": 7
+    },
+    "stats": {
+      "minPhysicalDamage": 2,
+      "maxPhysicalDamage": 10,
+      "criticalChance": 14,
+      "attackSpeed": 6.5,
+      "minMagicDamage": 24,
+      "maxMagicDamage": 34.5,
+      "spellCritChance": 24,
+      "health": 120,
+      "mana": 120,
+      "physicalDamageReduction": 2.5,
+      "magicDamageReduction": 8
+    },
+    "rotation": [
+      "enrage",
+      "ignatius-flames",
+      "arcane-missile",
+      "double-strike"
+    ],
+    "attackType": "magic",
+    "createdAt": "2025-03-09T01:30:51.792Z",
+    "level": 8,
+    "experience": 31,
+    "availableAttributePoints": 0
+  },
+  {
+    "id": "1fadc813-3fb8-42b1-9bed-e2321748fce0",
+    "playerId": "b1af30b3-ae0d-456c-a470-421bbfa11b45",
+    "name": "binch",
+    "attributes": {
+      "strength": 1,
+      "agility": 11,
+      "stamina": 1,
+      "intellect": 9,
+      "wisdom": 1
+    },
+    "stats": {
+      "minPhysicalDamage": 2,
+      "maxPhysicalDamage": 14,
+      "criticalChance": 22,
+      "attackSpeed": 4.5,
+      "minMagicDamage": 18,
+      "maxMagicDamage": 19.5,
+      "spellCritChance": 18,
+      "health": 110,
+      "mana": 60,
+      "physicalDamageReduction": 1.5,
+      "magicDamageReduction": 1.5
+    },
+    "rotation": [
+      "arcane-missile",
+      "enrage",
+      "ignatius-flames",
+      "arcane-missile",
+      "mana-burn",
+      "stone-skin"
+    ],
+    "attackType": "magic",
+    "createdAt": "2025-03-09T01:43:27.731Z",
+    "level": 5,
+    "experience": 201,
+    "availableAttributePoints": 0
+  },
+  {
+    "id": "c88e66fa-80e7-4bf4-aed9-6c5e86483d32",
+    "playerId": "b1af30b3-ae0d-456c-a470-421bbfa11b45",
+    "name": "Nastyyy Boi",
+    "attributes": {
+      "strength": 2,
+      "agility": 10,
+      "stamina": 1,
+      "intellect": 1,
+      "wisdom": 1
+    },
+    "stats": {
+      "minPhysicalDamage": 13,
+      "maxPhysicalDamage": 27,
+      "criticalChance": 9.58,
+      "attackSpeed": 5.8,
+      "minMagicDamage": 3,
+      "maxMagicDamage": 6,
+      "spellCritChance": 4.27,
+      "health": 115,
+      "mana": 63,
+      "physicalDamageReduction": 5.59,
+      "magicDamageReduction": 4.81,
+      "dodgeChance": 6,
+      "accuracy": 65.76,
+      "blockChance": 3.85
+    },
+    "rotation": [
+      "enrage",
+      "skull-bash",
+      "backstab",
+      "double-strike"
+    ],
+    "attackType": "physical",
+    "createdAt": "2025-03-09T21:00:25.931Z",
+    "level": 1,
+    "experience": 90
+  },
+  {
+    "id": "b4cdde0c-d9e9-4d7d-8fc1-6be9d2f66c18",
+    "playerId": "e63c4dfb-53e4-42c4-8ef7-0ae242f7bdfa",
+    "name": "Peach",
+    "attributes": {
+      "strength": 3,
+      "agility": 3,
+      "stamina": 3,
+      "intellect": 3,
+      "wisdom": 3
+    },
+    "stats": {
+      "minPhysicalDamage": 11,
+      "maxPhysicalDamage": 19,
+      "criticalChance": 5.41,
+      "attackSpeed": 7.35,
+      "minMagicDamage": 11,
+      "maxMagicDamage": 19,
+      "spellCritChance": 5.41,
+      "health": 138,
+      "mana": 85,
+      "physicalDamageReduction": 6,
+      "magicDamageReduction": 6,
+      "dodgeChance": 3.86,
+      "accuracy": 64.94,
+      "blockChance": 4.51
+    },
+    "rotation": [
+      "enrage",
+      "double-strike",
+      "ignatius-flames",
+      "skull-bash",
+      "arcane-missile",
+      "backstab"
+    ],
+    "attackType": "physical",
+    "createdAt": "2025-03-09T21:38:50.332Z",
+    "level": 1,
+    "experience": 41
+  },
+  {
+    "id": "888b6424-755c-4788-a86a-1ba916feb352",
+    "playerId": "68d29e2b-3e4f-4c9a-8d05-b5d48af9b33c",
+    "name": "Name",
+    "attributes": {
+      "strength": 5,
+      "agility": 5,
+      "stamina": 3,
+      "intellect": 1,
+      "wisdom": 1
+    },
+    "stats": {
+      "minPhysicalDamage": 18,
+      "maxPhysicalDamage": 34,
+      "criticalChance": 6.79,
+      "attackSpeed": 6.83,
+      "minMagicDamage": 3,
+      "maxMagicDamage": 6,
+      "spellCritChance": 4.27,
+      "health": 138,
+      "mana": 63,
+      "physicalDamageReduction": 6.56,
+      "magicDamageReduction": 5.13,
+      "dodgeChance": 4.26,
+      "accuracy": 64.82,
+      "blockChance": 4.9
+    },
+    "rotation": [
+      "enrage",
+      "backstab",
+      "double-strike",
+      "skull-bash"
+    ],
+    "attackType": "physical",
+    "createdAt": "2025-03-09T21:48:09.556Z",
+    "level": 1,
+    "experience": 24
+  },
+  {
+    "id": "8104d301-4c0a-4063-8dfa-00da77b2ca84",
+    "playerId": "e2c5d10a-91d5-40dc-bfbf-2c7259548318",
+    "name": "Spoonfork",
+    "attributes": {
+      "strength": 2,
+      "agility": 9,
+      "stamina": 2,
+      "intellect": 1,
+      "wisdom": 1
+    },
+    "stats": {
+      "minPhysicalDamage": 12,
+      "maxPhysicalDamage": 25,
+      "criticalChance": 8.83,
+      "attackSpeed": 5.97,
+      "minMagicDamage": 3,
+      "maxMagicDamage": 6,
+      "spellCritChance": 4.27,
+      "health": 127,
+      "mana": 63,
+      "physicalDamageReduction": 5.88,
+      "magicDamageReduction": 4.97,
+      "dodgeChance": 5.61,
+      "accuracy": 65.56,
+      "blockChance": 4.08
+    },
+    "rotation": [],
+    "attackType": "physical",
+    "createdAt": "2025-03-09T21:50:33.722Z",
+    "level": 1,
+    "experience": 0
+  }
+]

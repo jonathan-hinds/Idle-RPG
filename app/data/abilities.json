@@ -1,0 +1,157 @@
+[
+  {
+    "id": "arcane-missile",
+    "name": "Arcane Missile",
+    "type": "magic",
+    "damage": "magic",
+    "damageMultiplier": 2.5,
+    "manaCost": 15,
+    "cooldown": 20,
+    "description": "Deals magic damage to the target"
+  },
+  {
+    "id": "backstab",
+    "name": "Backstab",
+    "type": "physical",
+    "damage": "physical",
+    "damageMultiplier": 1.2,
+    "manaCost": 5,
+    "cooldown": 70,
+    "description": "Performs a guaranteed critical strike",
+    "guaranteedCrit": true
+  },
+  {
+    "id": "enrage",
+    "name": "Enrage",
+    "type": "physical",
+    "damage": "none",
+    "manaCost": 5,
+    "cooldown": 60,
+    "description": "Increases damage by 50% for 20 seconds",
+    "buffEffect": {
+      "type": "damageIncrease",
+      "amount": 50,
+      "duration": 20
+    }
+  },
+  {
+    "id": "long-shot",
+    "name": "Long Shot",
+    "type": "physical",
+    "damage": "physical",
+    "damageMultiplier": 1.1,
+    "manaCost": 5,
+    "cooldown": 40,
+    "description": "Deals physical damage to the target and poisons them for 5 seconds (1 damage per second)",
+    "dotEffect": {
+      "type": "poison",
+      "damage": 1,
+      "duration": 5,
+      "interval": 1
+    }
+  },
+  {
+    "id": "mana-burn",
+    "name": "Mana Burn",
+    "type": "magic",
+    "damage": "none",
+    "manaCost": 5,
+    "cooldown": 40,
+    "description": "Drains 5 mana from the enemy and restores 5 mana to you every 5 seconds for 20 seconds",
+    "periodicEffect": {
+      "type": "manaDrain",
+      "amount": 5,
+      "duration": 20,
+      "interval": 5
+    }
+  },
+  {
+    "id": "lesser-heal",
+    "name": "Lesser Heal",
+    "type": "magic",
+    "damage": "none",
+    "manaCost": 25,
+    "cooldown": 60,
+    "description": "Heals the caster for their magic damage plus 10%",
+    "healEffect": {
+      "type": "selfHeal",
+      "multiplier": 1.1
+    }
+  },
+  {
+    "id": "stone-skin",
+    "name": "Stone Skin",
+    "type": "magic",
+    "damage": "none",
+    "manaCost": 12,
+    "cooldown": 60,
+    "description": "Increases physical damage reduction by an amount based on magic damage for 30 seconds",
+    "buffEffect": {
+      "type": "physicalReduction",
+      "magicDamageScaling": true,
+      "baseAmount": 15,
+      "scalingRate": 0.2,
+      "maxAmount": 35,
+      "duration": 30
+    }
+  },
+  {
+    "id": "earth-shock",
+    "name": "Earth Shock",
+    "type": "magic",
+    "damage": "magic",
+    "damageMultiplier": 0.5,
+    "manaCost": 16,
+    "cooldown": 60,
+    "description": "Deals 50% magic damage and slows the target's attack speed by 25% for 60 seconds",
+    "buffEffect": {
+      "type": "attackSpeedReduction",
+      "amount": 25,
+      "duration": 60,
+      "targetsSelf": false
+    }
+  },
+  {
+    "id": "ignatius-flames",
+    "name": "Ignatius Flames",
+    "type": "magic",
+    "damage": "magic",
+    "damageMultiplier": 2.5,
+    "manaCost": 20,
+    "cooldown": 45,
+    "description": "Deals magic damage with increased critical chance. On critical hit, sets the target on fire. The spell's knockback damages the caster.",
+    "baseCritBonus": 10,
+    "selfDamagePercent": 10,
+    "criticalEffect": {
+      "type": "burning",
+      "damagePercent": 10,
+      "duration": 5,
+      "interval": 1
+    }
+  },
+  {
+    "id": "double-strike",
+    "name": "Double Strike",
+    "type": "physical",
+    "damage": "physical",
+    "damageMultiplier": 1.0,
+    "manaCost": 15,
+    "cooldown": 60,
+    "description": "Performs two basic attacks in quick succession",
+    "multiAttack": {
+      "count": 2,
+      "delay": 0.5
+    }
+  },
+  {
+  "id": "skull-bash",
+  "name": "Skull Bash",
+  "type": "physical",
+  "damage": "physical",
+  "damageMultiplier": 0.5,
+  "manaCost": 15,
+  "cooldown": 70,
+  "description": "Strikes the target for 50% physical damage and stuns them, causing them to skip their next attack",
+  "stunEffect": true
+}
+]
