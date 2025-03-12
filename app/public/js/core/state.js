@@ -73,6 +73,10 @@ setInventory(inventory) {
  * Update a character in the characters list
  * @param {Object} updatedCharacter - Updated character data
  */
+/**
+ * Update a character in the characters list
+ * @param {Object} updatedCharacter - Updated character data
+ */
 updateCharacter(updatedCharacter) {
   const index = this.characters.findIndex(c => c.id === updatedCharacter.id);
   if (index !== -1) {

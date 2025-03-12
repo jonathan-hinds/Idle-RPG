@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const itemService = require('../services/item-service');
-const characterService = require('../services/character-service');
+const characterModel = require('../models/character-model');
 const { readDataFile } = require('../utils/data-utils');
 
 /**
@@ -146,7 +146,7 @@ router.post('/equip', authCheck, (req, res) => {
     }
     
     // Update character's stats based on equipment
-    const updatedCharacter = characterService.updateCharacterWithEquipment(characterId);
+    const updatedCharacter = characterModel.updateCharacterWithEquipment(characterId);
     
     res.json({ success: true, inventory: result.inventory, character: updatedCharacter });
   } catch (error) {
@@ -186,7 +186,7 @@ router.post('/unequip', authCheck, (req, res) => {
     }
     
     // Update character's stats based on equipment
-    const updatedCharacter = characterService.updateCharacterWithEquipment(characterId);
+    const updatedCharacter = characterModel.updateCharacterWithEquipment(characterId);
     
     res.json({ success: true, inventory: result.inventory, character: updatedCharacter });
   } catch (error) {

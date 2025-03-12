@@ -266,9 +266,6 @@ function calculateBattleExperience(isWinner, characterLevel, isMatchmade) {
  * @returns {Object} Updated character
  */
 function updateCharacterWithEquipment(characterId) {
-  // Use direct require here to avoid any import issues
-  const { readDataFile, writeDataFile } = require('../utils/data-utils');
-  
   const characters = readDataFile('characters.json');
   const inventories = readDataFile('inventories.json');
   const characterIndex = characters.findIndex(c => c.id === characterId);
@@ -280,31 +277,44 @@ function updateCharacterWithEquipment(characterId) {
   const character = characters[characterIndex];
   const inventory = inventories.find(inv => inv.characterId === characterId) || { equipment: {} };
   
-  // Calculate base stats from attributes
-  const baseStats = calculateStats(character.attributes);
+  // Get base attributes
+  const baseAttributes = {...character.attributes};
   
-  // Apply equipment stats
-  const updatedStats = { ...baseStats };
+  // Apply equipment attribute bonuses
+  const totalAttributes = {...baseAttributes};
   const equipment = inventory.equipment || {};
   
-  // Process each equipped item
+  // Calculate total attributes with equipment bonuses
   Object.values(equipment).forEach(item => {
     if (!item || !item.stats) return;
     
-    // Add stats from the item
+    // Add attribute bonuses from equipment
     Object.entries(item.stats).forEach(([statName, value]) => {
-      if (updatedStats[statName] !== undefined) {
-        updatedStats[statName] += value;
-      } else {
-        // For new stats, just set the value
-        updatedStats[statName] = value;
+      if (totalAttributes[statName] !== undefined) {
+        totalAttributes[statName] += value;
       }
     });
   });
   
-  // Update character's stats
+  // Calculate derived stats from total attributes (including equipment bonuses)
+  const updatedStats = calculateStats(totalAttributes);
+  
+  // Apply direct stat bonuses from equipment (non-attributes)
+  Object.values(equipment).forEach(item => {
+    if (!item || !item.stats) return;
+    
+    // Add non-attribute stats from equipment
+    Object.entries(item.stats).forEach(([statName, value]) => {
+      // Skip attributes as they're already factored into derived stats
+      if (!totalAttributes.hasOwnProperty(statName) && updatedStats.hasOwnProperty(statName)) {
+        updatedStats[statName] += value;
+      }
+    });
+  });
+  
+  // Update character's stats and store equipment
   character.stats = updatedStats;
-  character.equipment = equipment; // Store equipment for client-side effects
+  character.equipment = equipment;
   
   // Save updated character
   writeDataFile('characters.json', characters);

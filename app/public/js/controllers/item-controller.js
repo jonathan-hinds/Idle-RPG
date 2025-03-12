@@ -136,13 +136,20 @@ class ItemController {
     
     try {
       const result = await window.API.equipItem(window.GameState.selectedCharacter.id, itemId);
+      console.log("Equipment result from server:", result);
+      
+      // Force a complete refresh of the character state
       window.GameState.setInventory(result.inventory);
       window.GameState.updateCharacter(result.character);
+      
+      // Ensure the selected character is updated with the latest data
+      window.GameState.selectedCharacter = result.character;
+      
+      // Update all UI components
       window.ItemUI.renderInventory(result.inventory, window.GameState.items);
       window.ItemUI.renderEquipment(result.inventory.equipment || {});
-      
-      // Update character UI to reflect new stats
       window.CharacterUI.renderCharacterDetails(result.character);
+      window.CharacterUI.renderCharactersList(window.GameState.characters);
       
       window.Notification.success('Item equipped successfully');
     } catch (error) {
@@ -150,8 +157,7 @@ class ItemController {
       window.Notification.error(error.message || 'Failed to equip item');
     }
   }
-  
-  /**
+    /**
    * Unequip an item
    * @param {string} slot - Slot to unequip
    */
@@ -160,13 +166,20 @@ class ItemController {
     
     try {
       const result = await window.API.unequipItem(window.GameState.selectedCharacter.id, slot);
+      console.log("Unequip result from server:", result);
+      
+      // Force a complete refresh of the character state
       window.GameState.setInventory(result.inventory);
       window.GameState.updateCharacter(result.character);
+      
+      // Ensure the selected character is updated with the latest data
+      window.GameState.selectedCharacter = result.character;
+      
+      // Update all UI components
       window.ItemUI.renderInventory(result.inventory, window.GameState.items);
       window.ItemUI.renderEquipment(result.inventory.equipment || {});
-      
-      // Update character UI to reflect new stats
       window.CharacterUI.renderCharacterDetails(result.character);
+      window.CharacterUI.renderCharactersList(window.GameState.characters);
       
       window.Notification.success('Item unequipped successfully');
     } catch (error) {
@@ -174,4 +187,5 @@ class ItemController {
       window.Notification.error(error.message || 'Failed to unequip item');
     }
   }
+    
   }

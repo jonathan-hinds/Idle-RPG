@@ -31,6 +31,10 @@ class CharacterUI {
    * Render the characters list
    * @param {Array} characters - List of characters
    */
+/**
+ * Render the characters list
+ * @param {Array} characters - List of characters
+ */
 renderCharactersList(characters) {
   const container = this.elements.charactersList;
   
@@ -40,35 +44,74 @@ renderCharactersList(characters) {
   }
   
   container.innerHTML = '<div class="row">' + 
-    characters.map(character => `
-      <div class="col-md-4 mb-3">
-        <div class="card character-card" data-character-id="${character.id}">
-          <div class="card-body">
-            <h5 class="card-title">${character.name}</h5>
-            <div class="character-level">Lvl ${character.level || 1}</div>
-            <p class="card-text">
-              STR: ${character.attributes.strength} | 
-              AGI: ${character.attributes.agility} | 
-              STA: ${character.attributes.stamina} <br>
-              INT: ${character.attributes.intellect} | 
-              WIS: ${character.attributes.wisdom}
-            </p>
-            <div class="progress mb-2" style="height: 5px;">
-              <div class="progress-bar bg-success" role="progressbar" 
-                style="width: ${(character.experience / Character.calculateExpForNextLevel(character.level || 1)) * 100}%" 
-                aria-valuenow="${(character.experience / Character.calculateExpForNextLevel(character.level || 1)) * 100}" 
-                aria-valuemin="0" 
-                aria-valuemax="100"></div>
+    characters.map(character => {
+      // Calculate equipment bonuses
+      const bonuses = {
+        strength: 0,
+        agility: 0,
+        stamina: 0,
+        intellect: 0,
+        wisdom: 0
+      };
+      
+      if (character.equipment) {
+        Object.values(character.equipment).forEach(item => {
+          if (!item || !item.stats) return;
+          
+          Object.entries(item.stats).forEach(([stat, value]) => {
+            if (bonuses[stat] !== undefined) {
+              bonuses[stat] += value;
+            }
+          });
+        });
+      }
+      
+      // Get total attributes with bonuses
+      const attrs = character.attributes;
+      const totalStr = attrs.strength + bonuses.strength;
+      const totalAgi = attrs.agility + bonuses.agility;
+      const totalSta = attrs.stamina + bonuses.stamina;
+      const totalInt = attrs.intellect + bonuses.intellect;
+      const totalWis = attrs.wisdom + bonuses.wisdom;
+      
+      return `
+        <div class="col-md-4 mb-3">
+          <div class="card character-card" data-character-id="${character.id}">
+            <div class="card-body">
+              <h5 class="card-title">${character.name}</h5>
+              <div class="character-level">Lvl ${character.level || 1}</div>
+              <p class="card-text">
+                STR: ${totalStr} | 
+                AGI: ${totalAgi} | 
+                STA: ${totalSta} <br>
+                INT: ${totalInt} | 
+                WIS: ${totalWis}
+              </p>
+              <div class="progress mb-2" style="height: 5px;">
+                <div class="progress-bar bg-success" role="progressbar" 
+                  style="width: ${(character.experience / Character.calculateExpForNextLevel(character.level || 1)) * 100}%" 
+                  aria-valuenow="${(character.experience / Character.calculateExpForNextLevel(character.level || 1)) * 100}" 
+                  aria-valuemin="0" 
+                  aria-valuemax="100"></div>
+              </div>
+              <button class="btn btn-sm btn-primary select-character-btn" data-character-id="${character.id}">
+                Select
+              </button>
             </div>
-            <button class="btn btn-sm btn-primary select-character-btn" data-character-id="${character.id}">
-              Select
-            </button>
           </div>
         </div>
-      </div>
-    `).join('') + '</div>';
+      `;
+    }).join('') + '</div>';
 }
 
+/**
+ * Render character details
+ * @param {Object} character - The character to display
+ */
+/**
+ * Render character details
+ * @param {Object} character - The character to display
+ */
 /**
  * Render character details
  * @param {Object} character - The character to display
@@ -76,21 +119,53 @@ renderCharactersList(characters) {
 renderCharacterDetails(character) {
   if (!character) return;
   
+  console.log("Character details being rendered:", character);
+  console.log("Stats to be displayed:", character.stats);
+  
   // Show character details section
   this.elements.characterDetails.classList.remove('d-none');
   
   // Set character name
   this.elements.characterName.textContent = character.name;
   
-  // Set attributes
-  document.getElementById('attr-strength').textContent = character.attributes.strength;
-  document.getElementById('attr-agility').textContent = character.attributes.agility;
-  document.getElementById('attr-stamina').textContent = character.attributes.stamina;
-  document.getElementById('attr-intellect').textContent = character.attributes.intellect;
-  document.getElementById('attr-wisdom').textContent = character.attributes.wisdom;
+  // Set attributes with equipment bonuses
+  const baseAttrs = character.attributes;
+  const equipment = character.equipment || {};
+  
+  // Calculate equipment bonuses
+  const bonuses = {
+    strength: 0,
+    agility: 0, 
+    stamina: 0,
+    intellect: 0,
+    wisdom: 0
+  };
+  
+  // Sum up all equipment bonuses
+  Object.values(equipment).forEach(item => {
+    if (!item || !item.stats) return;
+    
+    Object.entries(item.stats).forEach(([stat, value]) => {
+      if (bonuses[stat] !== undefined) {
+        bonuses[stat] += value;
+      }
+    });
+  });
+  
+  // Display attributes with bonuses
+  document.getElementById('attr-strength').textContent = baseAttrs.strength + bonuses.strength;
+  document.getElementById('attr-agility').textContent = baseAttrs.agility + bonuses.agility;
+  document.getElementById('attr-stamina').textContent = baseAttrs.stamina + bonuses.stamina;
+  document.getElementById('attr-intellect').textContent = baseAttrs.intellect + bonuses.intellect;
+  document.getElementById('attr-wisdom').textContent = baseAttrs.wisdom + bonuses.wisdom;
   
   // Set derived stats
-  this.renderDerivedStats(character.stats);
+  if (character.stats) {
+    console.log("Updating derived stats display");
+    this.renderDerivedStats(character.stats);
+  } else {
+    console.error("Character stats missing when rendering details");
+  }
   
   // Set attack type dropdown
   if (document.getElementById('attack-type')) {
