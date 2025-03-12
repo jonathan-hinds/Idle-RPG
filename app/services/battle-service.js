@@ -358,7 +358,12 @@ function processAbility(battleState, attacker, defender, time, ability) {
   }
   else if (ability.guaranteedCrit) {
     // Pass the metadata to the physical attack function
-    performPhysicalAttack(battleState, attacker, defender, time, ability.name, ability.damageMultiplier || 1.2, true, baseMetadata);
+    const result = performPhysicalAttack(battleState, attacker, defender, time, ability.name, ability.damageMultiplier || 1.2, true, baseMetadata);
+    
+    // Only apply additional effects if the attack hit
+    if (result.actionResult !== 'dodge' && result.damage > 0) {
+      // Add any additional effects here if this ability had any
+    }
   }
   else if (ability.multiAttack) {
     processMultiAttackAbility(battleState, attacker, defender, time, ability, abilityMessage, baseMetadata);
@@ -369,16 +374,14 @@ function processAbility(battleState, attacker, defender, time, ability) {
       performPhysicalAttack(battleState, attacker, defender, time, ability.name, ability.damageMultiplier || 0.5, false, baseMetadata) :
       performMagicAttack(battleState, attacker, defender, time, ability.name, ability.damageMultiplier || 0.5, baseMetadata);
       
-    // Apply stun if the defender is still alive
-    if (defender.currentHealth > 0) {
+    // Apply stun if the attack hit and the defender is still alive
+    if (result.actionResult !== 'dodge' && result.damage > 0 && defender.currentHealth > 0) {
       applyStunEffect(battleState, attacker, defender, time, ability.name, baseMetadata);
     }
   }
   else {
     processDamageAbility(battleState, attacker, defender, time, ability, abilityMessage, baseMetadata);
   }
-  
-  // Log mana after ability processing
 }
 
 /**
@@ -449,6 +452,11 @@ function performPhysicalAttack(battleState, attacker, defender, time, attackName
         isSystem: true,
         actionType: 'defeat'
       }));
+  }
+  
+  // NEW: Check for weapon effects on basic attacks
+  if (attackName === 'Basic Attack' && defender.currentHealth > 0) {
+    processWeaponEffect(battleState, attacker, defender, time, result);
   }
   
   return result;
@@ -915,6 +923,11 @@ function performMagicAttack(battleState, attacker, defender, time, attackName, m
       }));
   }
   
+  // NEW: Check for weapon effects on basic magic attacks
+  if (attackName === 'Basic Magic Attack' && defender.currentHealth > 0) {
+    processWeaponEffect(battleState, attacker, defender, time, result);
+  }
+  
   return result;
 }
 
@@ -931,6 +944,124 @@ function performBasicAttack(battleState, attacker, defender, time) {
     performMagicAttack(battleState, attacker, defender, time, 'Basic Magic Attack', 1);
   } else {
     performPhysicalAttack(battleState, attacker, defender, time, 'Basic Attack', 1);
+  }
+}
+
+/**
+ * Process weapon effects (like stun, poison, etc.) on basic attacks
+ * @param {Object} battleState - Battle state
+ * @param {Object} attacker - Attacking character
+ * @param {Object} defender - Defending character
+ * @param {number} time - Current battle time
+ */
+function processWeaponEffect(battleState, attacker, defender, time, attackResult) {
+  // If the attack missed or was dodged, don't apply weapon effects
+  if (attackResult.actionResult === 'dodge' || attackResult.damage <= 0) {
+    return;
+  }
+  
+  // Check if attacker has equipment
+  if (!attacker.equipment) return;
+  
+  // Check mainHand for effects
+  const mainHand = attacker.equipment.mainHand;
+  if (mainHand && mainHand.effect && mainHand.effect.onBasicAttack) {
+    // Roll for effect chance
+    const effectChance = mainHand.effect.chance || 0;
+    if (Math.random() * 100 <= effectChance) {
+      // Apply the effect based on its type
+      applyWeaponEffect(battleState, attacker, defender, time, mainHand);
+      return; // Return after applying mainHand effect
+    }
+  }
+  
+  // Check offHand for effects if no mainHand effect triggered and not using a two-handed weapon
+  if (!mainHand?.twoHanded) {
+    const offHand = attacker.equipment.offHand;
+    if (offHand && offHand.effect && offHand.effect.onBasicAttack) {
+      // Roll for effect chance
+      const effectChance = offHand.effect.chance || 0;
+      if (Math.random() * 100 <= effectChance) {
+        // Apply the effect based on its type
+        applyWeaponEffect(battleState, attacker, defender, time, offHand);
+      }
+    }
+  }
+}
+
+/**
+ * Apply a weapon effect to the target
+ * @param {Object} battleState - Battle state
+ * @param {Object} attacker - Attacking character
+ * @param {Object} defender - Defending character
+ * @param {number} time - Current battle time
+ * @param {Object} weapon - Weapon with the effect
+ */
+function applyWeaponEffect(battleState, attacker, defender, time, weapon) {
+  const effect = weapon.effect;
+  
+  switch (effect.type) {
+    case 'stun':
+      // Use the existing applyStunEffect function for consistency
+      applyStunEffect(battleState, attacker, defender, time, weapon.name);
+      break;
+      
+    case 'poison':
+      // Create poison effect
+      const poisonEffect = {
+        name: 'Poison',
+        type: 'poison',
+        damage: effect.damage,
+        duration: effect.duration,
+        interval: 1, // 1 second interval
+        lastProcTime: time,
+        endTime: time + effect.duration,
+        sourceName: attacker.name,
+        sourceId: attacker.id
+      };
+      
+      // Apply poison effect
+      applyPeriodicEffect(battleState, attacker, defender, time, poisonEffect);
+      break;
+      
+    case 'burning':
+      // Create burning effect
+      const burningEffect = {
+        name: 'Burning',
+        type: 'burning',
+        damage: effect.damage,
+        duration: effect.duration,
+        interval: 1, // 1 second interval
+        lastProcTime: time,
+        endTime: time + effect.duration,
+        sourceName: attacker.name,
+        sourceId: attacker.id
+      };
+      
+      // Apply burning effect
+      applyPeriodicEffect(battleState, attacker, defender, time, burningEffect);
+      break;
+      
+    case 'manaDrain':
+      // Create mana drain effect
+      const manaDrainEffect = {
+        name: 'Mana Drain',
+        type: 'manaDrain',
+        amount: effect.amount,
+        duration: 5, // Default to 5 seconds
+        interval: 1, // 1 second interval
+        lastProcTime: time,
+        endTime: time + 5,
+        sourceName: attacker.name,
+        sourceId: attacker.id
+      };
+      
+      // Apply mana drain effect
+      applyPeriodicEffect(battleState, attacker, defender, time, manaDrainEffect);
+      break;
+      
+    default:
+      console.warn(`Unknown weapon effect type: ${effect.type}`);
   }
 }
 
