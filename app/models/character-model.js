@@ -1,7 +1,8 @@
 /**
  * Server-side character model and operations
  */
-
+// At the top of character-model.js, add this import:
+const { readDataFile, writeDataFile } = require('../utils/data-utils');
 /**
  * Calculate character stats based on attributes with non-linear scaling
  * @param {Object} attributes - Character attributes
@@ -258,6 +259,59 @@ function calculateBattleExperience(isWinner, characterLevel, isMatchmade) {
   }
 }
 
+
+/**
+ * Update a character's stats based on their equipment
+ * @param {string} characterId - Character ID
+ * @returns {Object} Updated character
+ */
+function updateCharacterWithEquipment(characterId) {
+  // Use direct require here to avoid any import issues
+  const { readDataFile, writeDataFile } = require('../utils/data-utils');
+  
+  const characters = readDataFile('characters.json');
+  const inventories = readDataFile('inventories.json');
+  const characterIndex = characters.findIndex(c => c.id === characterId);
+  
+  if (characterIndex === -1) {
+    throw new Error(`Character not found: ${characterId}`);
+  }
+  
+  const character = characters[characterIndex];
+  const inventory = inventories.find(inv => inv.characterId === characterId) || { equipment: {} };
+  
+  // Calculate base stats from attributes
+  const baseStats = calculateStats(character.attributes);
+  
+  // Apply equipment stats
+  const updatedStats = { ...baseStats };
+  const equipment = inventory.equipment || {};
+  
+  // Process each equipped item
+  Object.values(equipment).forEach(item => {
+    if (!item || !item.stats) return;
+    
+    // Add stats from the item
+    Object.entries(item.stats).forEach(([statName, value]) => {
+      if (updatedStats[statName] !== undefined) {
+        updatedStats[statName] += value;
+      } else {
+        // For new stats, just set the value
+        updatedStats[statName] = value;
+      }
+    });
+  });
+  
+  // Update character's stats
+  character.stats = updatedStats;
+  character.equipment = equipment; // Store equipment for client-side effects
+  
+  // Save updated character
+  writeDataFile('characters.json', characters);
+  
+  return character;
+}
+
 /**
  * Calculate a random number between min and max (inclusive)
  * @param {number} min - Minimum value
@@ -277,5 +331,6 @@ module.exports = {
   canLevelUp,
   levelUpCharacter,
   applyPendingLevelUps,
-  calculateBattleExperience
+  calculateBattleExperience,
+  updateCharacterWithEquipment  // Add this new function to exports
 };

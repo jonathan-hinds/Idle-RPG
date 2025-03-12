@@ -359,3 +359,242 @@ header h1 {
   border-radius: 6px;
   border: 1px solid #dee2e6;
 }
+
+/* Inventory and Equipment styles */
+.inventory-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.inventory-group-title {
+  margin-bottom: 10px;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 5px;
+}
+
+.inventory-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Wider cards */
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.inventory-item {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: auto;        /* Change from fixed height to auto */
+  min-height: 180px;   /* Set a minimum height instead */
+}
+
+.inventory-item.weapon {
+  border-left: 4px solid #fd7e14;
+}
+
+.inventory-item.armor {
+  border-left: 4px solid #6c757d;
+}
+
+.inventory-item-name {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.inventory-item-slot {
+  color: #6c757d;
+  font-size: 0.8rem;
+  margin-bottom: 10px;
+}
+
+/* Inventory and Equipment styles */
+.inventory-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.inventory-group-title {
+  margin-bottom: 10px;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 5px;
+}
+
+.inventory-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.inventory-item {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: auto;        /* Auto height based on content */
+  min-height: 180px;   /* Minimum height */
+  margin-bottom: 15px; /* Add bottom margin to ensure spacing between cards */
+}
+
+.inventory-item-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;             /* Take up available space */
+}
+
+.inventory-item.weapon {
+  min-height: 200px;   /* Slightly taller for weapons with effects */
+}
+
+.inventory-item.armor {
+  border-left: 4px solid #6c757d;
+}
+
+.inventory-item-name {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.inventory-item-slot {
+  color: #6c757d;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.inventory-item-stats {
+  font-size: 0.85rem;
+  color: #0d6efd;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.inventory-item .equip-item-btn {
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+/* Equipment slots */
+.equipment-slots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.equipment-slot {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  padding: 10px;
+  position: relative;
+}
+
+.slot-name {
+  font-weight: bold;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 5px;
+}
+
+.slot-item {
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+}
+
+.slot-item.weapon {
+  border-left: 4px solid #fd7e14;
+  padding-left: 10px;
+}
+
+.slot-item.armor {
+  border-left: 4px solid #6c757d;
+  padding-left: 10px;
+}
+
+.empty-slot {
+  color: #6c757d;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  border: 2px dashed #dee2e6;
+  border-radius: 5px;
+}
+
+.item-name {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.item-stats {
+  color: #6c757d;
+  font-size: 0.8rem;
+  margin-bottom: 10px;
+}
+
+.unequip-item-btn {
+  margin-top: auto;
+}
+
+/* Shop items */
+.shop-item {
+  height: 100%;
+  transition: transform 0.2s;
+}
+
+.shop-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.shop-item.weapon {
+  border-left: 4px solid #fd7e14;
+}
+
+.shop-item.armor {
+  border-left: 4px solid #6c757d;
+}
+
+.item-price {
+  font-weight: bold;
+}
+
+.item-effect {
+  font-size: 0.9rem;
+  color: #6610f2;
+}
+
+.inventory-item-effect {
+  font-size: 0.85rem;
+  color: #6f42c1;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.stat-item {
+  background-color: #f0f8ff;
+  padding: 2px 5px;
+  border-radius: 3px;
+  margin-right: 4px;
+  white-space: nowrap;
+  display: inline-block;
+  margin-bottom: 3px;
+}
+
+.inventory-item .equip-item-btn,
+.inventory-item .unequip-item-btn {
+  margin-top: auto;    /* Push to bottom */
+  align-self: flex-start;
+  position: relative;  /* Ensure normal positioning */
+  bottom: 0;           /* Align to bottom */
+  width: fit-content;
+}

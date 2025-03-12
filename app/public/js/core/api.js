@@ -312,5 +312,64 @@ class API {
     return this._request(`/api/challenges/${challengeId}/continue`, {
       method: 'POST'
     });
-  }  
+  } 
+  
+  /**
+ * Get all items
+ * @returns {Promise<Array>} List of items
+ */
+async getItems() {
+  const items = await this._request('/api/items');
+  return items;
+}
+
+/**
+ * Get character inventory
+ * @param {string} characterId - Character ID
+ * @returns {Promise<Object>} Inventory data
+ */
+async getInventory(characterId) {
+  return this._request(`/api/items/inventory/${characterId}`);
+}
+
+/**
+ * Buy an item for a character
+ * @param {string} characterId - Character ID
+ * @param {string} itemId - Item ID to buy
+ * @returns {Promise<Object>} Result
+ */
+async buyItem(characterId, itemId) {
+  return this._request('/api/items/buy', {
+    method: 'POST',
+    body: JSON.stringify({ characterId, itemId })
+  });
+}
+
+/**
+ * Equip an item for a character
+ * @param {string} characterId - Character ID
+ * @param {string} itemId - Item ID to equip
+ * @returns {Promise<Object>} Result
+ */
+async equipItem(characterId, itemId) {
+  return this._request('/api/items/equip', {
+    method: 'POST',
+    body: JSON.stringify({ characterId, itemId })
+  });
+}
+
+/**
+ * Unequip an item from a character
+ * @param {string} characterId - Character ID
+ * @param {string} slot - Equipment slot to unequip
+ * @returns {Promise<Object>} Result
+ */
+async unequipItem(characterId, slot) {
+  return this._request('/api/items/unequip', {
+    method: 'POST',
+    body: JSON.stringify({ characterId, slot })
+  });
+}
+  
+  
 }

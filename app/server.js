@@ -11,6 +11,7 @@ const characterRoutes = require('./routes/characters');
 const battleRoutes = require('./routes/battles');
 const abilityRoutes = require('./routes/abilities');
 const challengeRoutes = require('./routes/challenges'); 
+const itemRoutes = require('./routes/items');
 
 // Initialize express app
 const app = express();
@@ -42,6 +43,7 @@ app.use('/api/characters', characterRoutes);
 app.use('/api/battles', battleRoutes);
 app.use('/api/abilities', abilityRoutes);
 app.use('/api/challenges', challengeRoutes);
+app.use('/api/items', itemRoutes); // NEW LINE
 
 // Error handling middleware
 app.use((err, req, res, next) => {

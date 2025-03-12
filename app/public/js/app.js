@@ -66,29 +66,31 @@ class App {
   /**
    * Initialize UI components
    */
-  _initUI() {
-    // Initialize notification system
-    window.Notification = new NotificationUI();
-    
-    // Initialize UI components
-    window.CharacterUI = new CharacterUI();
-    window.AbilityUI = new AbilityUI();
-    window.BattleUI = new BattleUI();
-    window.MatchmakingUI = new MatchmakingUI();
-    window.ChallengeUI = new ChallengeUI();
-  }
+_initUI() {
+  // Initialize notification system
+  window.Notification = new NotificationUI();
+  
+  // Initialize UI components
+  window.CharacterUI = new CharacterUI();
+  window.AbilityUI = new AbilityUI();
+  window.BattleUI = new BattleUI();
+  window.MatchmakingUI = new MatchmakingUI();
+  window.ChallengeUI = new ChallengeUI();
+  window.ItemUI = new ItemUI(); // NEW LINE
+}
 
   /**
    * Initialize controllers
    */
-  _initControllers() {
-    window.AuthController = new AuthController();
-    window.CharacterController = new CharacterController();
-    window.RotationController = new RotationController();
-    window.BattleController = new BattleController();
-    window.MatchmakingController = new MatchmakingController();
-    window.ChallengeController = new ChallengeController();
-  }
+_initControllers() {
+  window.AuthController = new AuthController();
+  window.CharacterController = new CharacterController();
+  window.RotationController = new RotationController();
+  window.BattleController = new BattleController();
+  window.MatchmakingController = new MatchmakingController();
+  window.ChallengeController = new ChallengeController();
+  window.ItemController = new ItemController(); // NEW LINE
+}
 
   /**
    * Check authentication status

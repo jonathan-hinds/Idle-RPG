@@ -81,6 +81,9 @@
             <li class="nav-item" role="presentation">
               <button class="nav-link active" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button" role="tab" aria-controls="stats" aria-selected="true">Stats</button>
             </li>
+<li class="nav-item" role="presentation">
+  <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory" type="button" role="tab" aria-controls="inventory" aria-selected="false">Inventory</button>
+</li>            
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="rotation-tab" data-bs-toggle="tab" data-bs-target="#rotation" type="button" role="tab" aria-controls="rotation" aria-selected="false">Rotation</button>
             </li>
@@ -90,6 +93,9 @@
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="challenge-tab" data-bs-toggle="tab" data-bs-target="#challenge" type="button" role="tab" aria-controls="challenge" aria-selected="false">Challenge</button>
             </li>
+<li class="nav-item" role="presentation">
+  <button class="nav-link" id="shop-tab" data-bs-toggle="tab" data-bs-target="#shop" type="button" role="tab" aria-controls="shop" aria-selected="false">Shop</button>
+</li>            
           </ul>
         </div>
         <div class="card-body">
@@ -265,8 +271,23 @@
   </div>
 </div>
 </div>
-            
-<!-- Rotation Tab -->
+<!-- Inventory Tab -->
+<div class="tab-pane fade" id="inventory" role="tabpanel" aria-labelledby="inventory-tab">
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <h4>Equipment</h4>
+      <div id="equipment-slots" class="mb-4">
+        <!-- Equipment slots will be shown here -->
+      </div>
+      
+      <h4>Inventory</h4>
+      <div id="inventory-list">
+        <!-- Inventory items will be shown here -->
+        <div class="alert alert-info">No items in inventory. Visit the shop to buy items.</div>
+      </div>
+    </div>
+  </div>
+</div>            
 <!-- Rotation Tab -->
 <div class="tab-pane fade" id="rotation" role="tabpanel" aria-labelledby="rotation-tab">
   <div class="mb-3">
@@ -346,7 +367,16 @@
     </ul>
   </div>
 </div>          
-            
+<!-- Shop Tab -->
+<div class="tab-pane fade" id="shop" role="tabpanel" aria-labelledby="shop-tab">
+  <h4>Item Shop</h4>
+  <p>Buy equipment to enhance your character's abilities in battle.</p>
+  
+  <div id="shop-items-list">
+    <!-- Shop items will be shown here -->
+    <div class="alert alert-info">Loading shop items...</div>
+  </div>
+</div>            
             
             
             
@@ -570,6 +600,7 @@
 <script src="js/models/ability.js"></script>
 <script src="js/models/character.js"></script>
 <script src="js/models/battle.js"></script>
+  <script src="js/models/item.js"></script> <!-- NEW LINE -->
 
 <!-- Engine -->
 <script src="js/engine/combat-calculator.js"></script>
@@ -584,6 +615,7 @@
 <script src="js/ui/battle-ui.js"></script>
 <script src="js/ui/matchmaking-ui.js"></script>
 <script src="js/ui/challenge-ui.js"></script> <!-- Make sure this is here -->
+  <script src="js/ui/item-ui.js"></script> <!-- NEW LINE -->
 
 <!-- Controllers -->
 <script src="js/controllers/character-controller.js"></script>
@@ -591,6 +623,7 @@
 <script src="js/controllers/battle-controller.js"></script>
 <script src="js/controllers/matchmaking-controller.js"></script>
 <script src="js/controllers/challenge-controller.js"></script> <!-- Make sure this is here -->
+  <script src="js/controllers/item-controller.js"></script> <!-- NEW LINE -->
 
 <!-- Authentication -->
 <script src="js/auth.js"></script>

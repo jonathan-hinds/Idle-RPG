@@ -1,0 +1,143 @@
+[
+    {
+      "id": "skull-crush-warhammer",
+      "name": "Skull Crush Warhammer",
+      "type": "weapon",
+      "slot": "mainHand",
+      "twoHanded": true,
+      "price": 0,
+      "stats": {
+        "strength": 3
+      },
+      "effect": {
+        "type": "stun",
+        "chance": 10,
+        "onBasicAttack": true
+      },
+      "description": "A mighty two-handed warhammer that has a chance to stun enemies."
+    },
+    {
+      "id": "poison-dagger",
+      "name": "Poison Dagger",
+      "type": "weapon",
+      "slot": "offHand",
+      "twoHanded": false,
+      "price": 0,
+      "stats": {
+        "agility": 2
+      },
+      "effect": {
+        "type": "poison",
+        "chance": 8,
+        "damage": 3,
+        "duration": 3,
+        "onBasicAttack": true
+      },
+      "description": "A small dagger coated with deadly poison."
+    },
+    {
+      "id": "wand-of-decay",
+      "name": "Wand of Decay",
+      "type": "weapon",
+      "slot": "mainHand",
+      "twoHanded": false,
+      "price": 0,
+      "stats": {
+        "intellect": 2,
+        "wisdom": 1
+      },
+      "effect": {
+        "type": "poison",
+        "chance": 12,
+        "damage": 4,
+        "duration": 4,
+        "onBasicAttack": true
+      },
+      "description": "A twisted wooden wand that inflicts poison on enemies."
+    },
+    {
+      "id": "wand-of-flames",
+      "name": "Wand of Flames",
+      "type": "weapon",
+      "slot": "mainHand",
+      "twoHanded": false,
+      "price": 0,
+      "stats": {
+        "intellect": 3
+      },
+      "effect": {
+        "type": "burning",
+        "chance": 8,
+        "damage": 5,
+        "duration": 3,
+        "onBasicAttack": true
+      },
+      "description": "A wand that occasionally sets enemies ablaze."
+    },
+    {
+      "id": "sword-of-draining",
+      "name": "Sword of Draining",
+      "type": "weapon",
+      "slot": "offHand",
+      "twoHanded": false,
+      "price": 0,
+      "stats": {
+        "strength": 1,
+        "agility": 1
+      },
+      "effect": {
+        "type": "manaDrain",
+        "chance": 10,
+        "amount": 5,
+        "onBasicAttack": true
+      },
+      "description": "A sword that drains mana from enemies."
+    },
+    {
+      "id": "delightfully-pleasant-hood",
+      "name": "Delightfully Pleasant Hood",
+      "type": "armor",
+      "slot": "head",
+      "price": 0,
+      "stats": {
+        "intellect": 1,
+        "spellCritChance": 4
+      },
+      "description": "A comfortable hood that enhances magical abilities."
+    },
+    {
+      "id": "iron-bound-chest-plate",
+      "name": "Iron Bound Chest Plate",
+      "type": "armor",
+      "slot": "chest",
+      "price": 0,
+      "stats": {
+        "stamina": 2,
+        "blockChance": 5
+      },
+      "description": "A sturdy chest plate that improves blocking."
+    },
+    {
+      "id": "light-leather-trousers",
+      "name": "Light Leather Trousers",
+      "type": "armor",
+      "slot": "legs",
+      "price": 0,
+      "stats": {
+        "attackSpeed": -5
+      },
+      "description": "Lightweight leg armor that increases attack speed."
+    },
+    {
+      "id": "dragons-crest",
+      "name": "Dragon's Crest",
+      "type": "armor",
+      "slot": "head",
+      "price": 0,
+      "stats": {
+        "wisdom": 3,
+        "stamina": 1
+      },
+      "description": "A helm adorned with the symbol of a dragon."
+    }
+  ]

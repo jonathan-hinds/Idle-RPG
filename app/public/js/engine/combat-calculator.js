@@ -16,7 +16,7 @@ class CombatCalculator {
    * @returns {Object} Attack result
    */
 calculatePhysicalAttack(attacker, defender, attackName, multiplier = 1, guaranteedCrit = false) {
-  // Check if attack hits (accuracy vs dodge)
+  // Original calculation logic
   const hitResult = this.calculateHitChance(attacker, defender);
   
   // Return early with miss info if attack misses
@@ -27,7 +27,8 @@ calculatePhysicalAttack(attacker, defender, attackName, multiplier = 1, guarante
       baseDamage: 0,
       damageType: 'physical',
       attackName,
-      actionResult: hitResult.actionResult
+      actionResult: hitResult.actionResult,
+      weaponEffect: null
     };
   }
   
@@ -81,15 +82,48 @@ calculatePhysicalAttack(attacker, defender, attackName, multiplier = 1, guarante
   damageReduction = Math.min(0.8, damageReduction);
   const finalDamage = Math.max(1, Math.round(baseDamage * (1 - damageReduction)));
   
+  // NEW CODE: Check for weapon effects (only on basic attacks)
+  let weaponEffect = null;
+  
+  if (attackName === 'Basic Attack' && attacker.equipment) {
+    // Check mainHand for effects
+    const mainHand = attacker.equipment.mainHand;
+    if (mainHand && mainHand.effect && mainHand.effect.onBasicAttack) {
+      const effectChance = mainHand.effect.chance || 0;
+      if (Math.random() * 100 <= effectChance) {
+        weaponEffect = {
+          source: mainHand.name,
+          ...mainHand.effect
+        };
+      }
+    }
+    
+    // Check offHand for effects if no mainHand effect triggered
+    if (!weaponEffect && !mainHand?.twoHanded) {
+      const offHand = attacker.equipment.offHand;
+      if (offHand && offHand.effect && offHand.effect.onBasicAttack) {
+        const effectChance = offHand.effect.chance || 0;
+        if (Math.random() * 100 <= effectChance) {
+          weaponEffect = {
+            source: offHand.name,
+            ...offHand.effect
+          };
+        }
+      }
+    }
+  }
+  
   return {
     damage: finalDamage,
     isCritical: isCrit,
     baseDamage: baseDamage,
     damageType: 'physical',
     attackName,
-    actionResult
+    actionResult,
+    weaponEffect
   };
 }
+
 
   /**
    * Calculate a magic attack
@@ -113,7 +147,8 @@ calculateMagicAttack(attacker, defender, attackName, multiplier = 1) {
       baseDamage: 0,
       damageType: 'magic',
       attackName,
-      actionResult: hitResult.actionResult
+      actionResult: hitResult.actionResult,
+      weaponEffect: null
     };
   }
   
@@ -158,13 +193,45 @@ calculateMagicAttack(attacker, defender, attackName, multiplier = 1) {
   damageReduction = Math.min(0.8, damageReduction);
   const finalDamage = Math.max(1, Math.round(baseDamage * (1 - damageReduction)));
   
+  // NEW CODE: Check for weapon effects (only on basic attacks)
+  let weaponEffect = null;
+  
+  if (attackName === 'Basic Magic Attack' && attacker.equipment) {
+    // Check mainHand for effects
+    const mainHand = attacker.equipment.mainHand;
+    if (mainHand && mainHand.effect && mainHand.effect.onBasicAttack) {
+      const effectChance = mainHand.effect.chance || 0;
+      if (Math.random() * 100 <= effectChance) {
+        weaponEffect = {
+          source: mainHand.name,
+          ...mainHand.effect
+        };
+      }
+    }
+    
+    // Check offHand for effects if no mainHand effect triggered
+    if (!weaponEffect && !mainHand?.twoHanded) {
+      const offHand = attacker.equipment.offHand;
+      if (offHand && offHand.effect && offHand.effect.onBasicAttack) {
+        const effectChance = offHand.effect.chance || 0;
+        if (Math.random() * 100 <= effectChance) {
+          weaponEffect = {
+            source: offHand.name,
+            ...offHand.effect
+          };
+        }
+      }
+    }
+  }
+  
   return {
     damage: finalDamage,
     isCritical: isCrit,
     baseDamage: baseDamage,
     damageType: 'magic',
     attackName,
-    actionResult: hitResult.actionResult
+    actionResult: hitResult.actionResult,
+    weaponEffect
   };
 }
 

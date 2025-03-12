@@ -9,18 +9,38 @@ class GameState {
   /**
    * Reset state to initial values
    */
-  reset() {
-    this.loggedIn = false;
-    this.playerId = null;
-    this.characters = [];
-    this.selectedCharacter = null;
-    this.abilities = [];
-    this.opponents = [];
-    this.battles = [];
-    this.queueStartTime = null;
-    this.inQueue = false;
-    this.challenge = null;
-  }
+reset() {
+  this.loggedIn = false;
+  this.playerId = null;
+  this.characters = [];
+  this.selectedCharacter = null;
+  this.abilities = [];
+  this.opponents = [];
+  this.battles = [];
+  this.queueStartTime = null;
+  this.inQueue = false;
+  this.challenge = null;
+  this.items = [];
+  this.inventory = null;
+}
+  
+  /**
+ * Set the items list
+ * @param {Array} items - List of items
+ */
+setItems(items) {
+  this.items = items;
+  window.EventBus.publish('items:loaded', items);
+}
+
+/**
+ * Set the character's inventory
+ * @param {Object} inventory - Character inventory
+ */
+setInventory(inventory) {
+  this.inventory = inventory;
+  window.EventBus.publish('inventory:updated', inventory);
+}
 
   /**
    * Set the abilities list
