@@ -19,6 +19,7 @@ const { readDataFile, writeDataFile } = require('../utils/data-utils');
  * @returns {Object} Battle result
  */
 function simulateBattle(character1, character2, isMatchmade = false) {
+  
   // Deep clone to avoid modifying originals
   const char1 = JSON.parse(JSON.stringify(character1));
   const char2 = JSON.parse(JSON.stringify(character2));
@@ -29,8 +30,18 @@ function simulateBattle(character1, character2, isMatchmade = false) {
     createCharacterBattleState(char2)
   );
   
+  
+  // IMPORTANT FIX: Reset the nextAbilityIndex to ensure abilities start from the beginning
+  battleState.character1.nextAbilityIndex = 0;
+  battleState.character2.nextAbilityIndex = 0;
+  
+  
   // Initialize battle log
   initializeBattleLog(battleState);
+  
+  // Log initial character states
+  dumpCharacterState(battleState.character1, "Battle start");
+  dumpCharacterState(battleState.character2, "Battle start");
   
   // Schedule attacks based on attack speed
   let char1NextAttack = 0;
@@ -86,7 +97,11 @@ function simulateBattle(character1, character2, isMatchmade = false) {
   // Determine winner
   determineWinner(battleState, battleTime);
   
-  // Format and return result, passing the isMatchmade flag
+  // Log final character states
+  dumpCharacterState(battleState.character1, "Battle end");
+  dumpCharacterState(battleState.character2, "Battle end");
+  
+  // Return at the end
   return formatBattleResult(battleState, isMatchmade);
 }
 
@@ -222,6 +237,7 @@ function logFinalState(battleState, battleTime) {
  * @param {number} time - Current battle time
  */
 function processAttack(battleState, attacker, defender, time) {
+  
   // Check if the attacker is stunned
   const isStunned = attacker.buffs && attacker.buffs.some(buff => buff.type === 'stun');
   
@@ -250,14 +266,21 @@ function processAttack(battleState, attacker, defender, time) {
   // Normal attack processing continues
   if (attacker.rotation && attacker.rotation.length > 0) {
     const nextAbilityId = attacker.rotation[attacker.nextAbilityIndex];
+    
     const cooldownEnd = attacker.cooldowns[nextAbilityId] || 0;
     
     if (time >= cooldownEnd) {
       // Get ability data
       const ability = getAbility(nextAbilityId);
       
+      if (ability) {
+        dumpCharacterState(attacker, `Before ability check`);
+      }
+      
       if (ability && hasEnoughMana(attacker, ability)) {
+        
         // Use ability mana if applicable
+        const previousMana = attacker.currentMana;
         if (ability.manaCost) {
           attacker.currentMana -= ability.manaCost;
         }
@@ -268,15 +291,33 @@ function processAttack(battleState, attacker, defender, time) {
         // Process the ability
         processAbility(battleState, attacker, defender, time, ability);
         
+        // Log mana after ability processing
+        
         // Move to next ability in rotation
+        const oldIndex = attacker.nextAbilityIndex;
         attacker.nextAbilityIndex = (attacker.nextAbilityIndex + 1) % attacker.rotation.length;
+        
         return;
+      } else {
+        if (!ability) {
+        } else {
+        }
       }
+    } else {
     }
+  } else {
   }
-  
-  // If no ability available or on cooldown, perform basic attack
   performBasicAttack(battleState, attacker, defender, time);
+}
+
+// Add this utility function at the top of your file
+function dumpCharacterState(character, label) {
+  console.log(`[STATE DUMP] ${label} - ${character.name}:`);
+  console.log(`  Health: ${character.currentHealth}/${character.stats.health}`);
+  console.log(`  Mana: ${character.currentMana}/${character.stats.mana}`);
+  console.log(`  Buffs: ${JSON.stringify(character.buffs)}`);
+  console.log(`  Effects: ${JSON.stringify(character.periodicEffects)}`);
+  console.log(`  Cooldowns: ${JSON.stringify(character.cooldowns)}`);
 }
 
 /**
@@ -287,22 +328,10 @@ function processAttack(battleState, attacker, defender, time) {
  * @param {number} time - Current battle time
  * @param {Object} ability - Ability being used
  */
-/**
- * Process an ability
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
- * @param {Object} ability - Ability being used
- */
 function processAbility(battleState, attacker, defender, time, ability) {
+  
   // Common logging for ability use with enhanced metadata
   const abilityMessage = `${attacker.name} ${ability.type === 'magic' ? 'casts' : 'uses'} ${ability.name}`;
-  
-  // Apply mana cost
-  if (ability.manaCost) {
-    attacker.currentMana -= ability.manaCost;
-  }
   
   // Basic metadata for all ability log entries
   const baseMetadata = {
@@ -349,8 +378,7 @@ function processAbility(battleState, attacker, defender, time, ability) {
     processDamageAbility(battleState, attacker, defender, time, ability, abilityMessage, baseMetadata);
   }
   
-  // Set ability on cooldown
-  attacker.cooldowns[ability.id] = time + ability.cooldown;
+  // Log mana after ability processing
 }
 
 /**
@@ -755,17 +783,10 @@ function processPeriodicAbility(battleState, attacker, defender, time, ability, 
  * @param {string} abilityMessage - Base message for the ability usage
  */
 function processDamageAbility(battleState, attacker, defender, time, ability, abilityMessage) {
+  
   if (ability.damage === 'physical') {
     const damageMultiplier = ability.damageMultiplier || 1;
-    
-    // Perform the physical attack and get the result
-    const attackResult = performPhysicalAttack(battleState, attacker, defender, time, ability.name, damageMultiplier);
-    
-    // Check if we should apply a stun effect
-    if (ability.stunEffect && defender.currentHealth > 0) {
-      // Apply stun effect to the defender
-      applyStunEffect(battleState, attacker, defender, time, ability.name);
-    }
+    performPhysicalAttack(battleState, attacker, defender, time, ability.name, damageMultiplier);
   } else if (ability.damage === 'magic') {
     // Get the damage multiplier (default to 1.5 if not specified)
     const damageMultiplier = ability.damageMultiplier || 1.5;
@@ -779,6 +800,7 @@ function processDamageAbility(battleState, attacker, defender, time, ability, ab
       
       // Apply self-damage if greater than 0
       if (selfDamage > 0) {
+        const beforeHealth = attacker.currentHealth;
         attacker.currentHealth -= selfDamage;
         
         // Log the self-damage
@@ -806,11 +828,6 @@ function processDamageAbility(battleState, attacker, defender, time, ability, ab
       }
     }
     
-    // Check if we should apply a stun effect for magic abilities too
-    if (ability.stunEffect && defender.currentHealth > 0) {
-      applyStunEffect(battleState, attacker, defender, time, ability.name);
-    }
-    
     // Handle critical hit effects (like burning)
     if (ability.criticalEffect && attackResult.isCritical) {
       if (ability.criticalEffect.type === 'burning') {
@@ -834,6 +851,7 @@ function processDamageAbility(battleState, attacker, defender, time, ability, ab
     // Fall back to basic attack if no damage type is specified
     performBasicAttack(battleState, attacker, defender, time);
   }
+  
 }
 
 /**
@@ -1110,8 +1128,10 @@ function processCharacterEffects(battleState, character, opponent, time) {
         case 'poison':
         case 'burning':
           // Apply damage
+          const beforeHealth = character.currentHealth;
+          const beforeMana = character.currentMana;
           character.currentHealth -= effect.damage;
-          
+                    
           // Log the periodic damage with correct actionType and effectType
           battleState.log.push(createLogEntry(time,
             `${character.name} takes ${effect.damage} damage from ${effect.name}`,
@@ -1143,12 +1163,14 @@ function processCharacterEffects(battleState, character, opponent, time) {
           
         case 'manaDrain':
           // Drain mana from the target
+          const beforeManaDrain = character.currentMana;
           const manaDrained = Math.min(character.currentMana, effect.amount);
           character.currentMana -= manaDrained;
-          
+                    
           // Give mana to the source
+          const sourceBefore = source.currentMana;
           source.currentMana = Math.min(source.stats.mana, source.currentMana + effect.amount);
-          
+                    
           if (manaDrained > 0) {
             battleState.log.push(createLogEntry(time,
               `${character.name} loses ${manaDrained} mana from ${effect.name}`,
