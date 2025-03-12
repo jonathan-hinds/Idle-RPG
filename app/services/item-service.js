@@ -144,32 +144,46 @@ function equipItem(characterId, itemId) {
     inventory.equipment = {};
   }
   
-  // Validate equipment compatibility
-  const validationResult = itemModel.validateEquipment(
-    characters.find(c => c.id === characterId),
-    item,
-    inventory.equipment
-  );
+  // Check for two-handed weapon conflicts
+  if (item.slot === 'offHand' && inventory.equipment.mainHand && inventory.equipment.mainHand.twoHanded) {
+    return { 
+      success: false, 
+      message: 'Cannot equip an off-hand item while a two-handed weapon is equipped. Please unequip your two-handed weapon first.'
+    };
+  }
   
-  if (!validationResult.success) {
-    return validationResult;
+  if (item.slot === 'mainHand' && !item.twoHanded && inventory.equipment.mainHand && 
+      inventory.equipment.mainHand.twoHanded) {
+    return { 
+      success: false, 
+      message: 'You already have a two-handed weapon equipped. Please unequip it first.'
+    };
   }
   
   // Handle two-handed weapons
   if (item.slot === 'mainHand' && item.twoHanded) {
-    // Remove any off-hand item
-    inventory.equipment.offHand = null;
+    // Check if offHand is equipped
+    if (inventory.equipment.offHand) {
+      // Return offHand to inventory
+      inventory.items.push(inventory.equipment.offHand.id);
+      inventory.equipment.offHand = null;
+    }
   }
   
   // If an item is already equipped in this slot, return it to inventory
   const currentEquipped = inventory.equipment[item.slot];
   if (currentEquipped) {
     // Put current equipped item back in inventory
-    inventory.items.push(currentEquipped);
+    inventory.items.push(currentEquipped.id);
   }
   
-  // Remove the item from inventory and equip it
-  inventory.items = inventory.items.filter(i => i !== itemId);
+  // Remove ONLY ONE instance of the item from inventory
+  const itemIndex = inventory.items.indexOf(itemId);
+  if (itemIndex !== -1) {
+    inventory.items.splice(itemIndex, 1);
+  }
+  
+  // Equip item
   inventory.equipment[item.slot] = item;
   
   // Save updated inventories

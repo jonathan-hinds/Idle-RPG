@@ -115,27 +115,32 @@ _initEventListeners() {
     }
   }
 
-  /**
-   * Render the characters list
-   */
-  renderCharactersList() {
-    window.CharacterUI.renderCharactersList(window.GameState.characters);
-  }
+/**
+ * Render the characters list
+ */
+renderCharactersList() {
+  window.CharacterUI.renderCharactersList(window.GameState.characters);
+}
 
   /**
    * Select a character
    * @param {string} characterId - ID of the character to select
    */
-  async selectCharacter(characterId) {
-    try {
-      const character = await window.API.getCharacter(characterId);
-      window.GameState.selectCharacter(character);
-      window.CharacterUI.renderCharacterDetails(character);
-    } catch (error) {
-      console.error('Error selecting character:', error);
-      window.Notification.error('Failed to select character');
+async selectCharacter(characterId) {
+  try {
+    const character = await window.API.getCharacter(characterId);
+    window.GameState.selectCharacter(character);
+    window.CharacterUI.renderCharacterDetails(character);
+    
+    // Preload inventory data when selecting a character
+    if (window.ItemController) {
+      window.ItemController.loadInventory();
     }
+  } catch (error) {
+    console.error('Error selecting character:', error);
+    window.Notification.error('Failed to select character');
   }
+}
 
   /**
    * Handle character creation

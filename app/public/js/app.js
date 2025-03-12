@@ -129,10 +129,26 @@ _initControllers() {
   /**
    * Handle successful login
    */
-  _onLoginSuccess() {
-    console.log('Login successful, loading characters');
-    window.CharacterController.loadCharacters();
+async _onLoginSuccess() {
+  console.log('Login successful, loading data');
+  
+  try {
+    // Load basic item data first
+    await window.API.getItems();
+    
+    // Then load characters
+    await window.CharacterController.loadCharacters();
+  } catch (error) {
+    console.error('Error initializing game data:', error);
+    window.Notification.error('Failed to load game data');
   }
+}
+  
+async getItems() {
+  const items = await this._request('/api/items');
+  window.GameState.setItems(items);
+  return items;
+}
 
   /**
    * Handle logout
