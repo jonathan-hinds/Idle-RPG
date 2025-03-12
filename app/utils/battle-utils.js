@@ -1,7 +1,6 @@
 /**
  * Utility functions for battle calculations and processing
  */
-
 /**
  * Calculate a random number between min and max (inclusive)
  * @param {number} min - Minimum value
@@ -11,7 +10,6 @@
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-
 /**
  * Calculate if a critical hit occurs based on chance
  * @param {number} critChance - Chance to crit as a percentage
@@ -20,7 +18,6 @@ function randomInt(min, max) {
 function calculateCritical(critChance) {
   return Math.random() * 100 <= critChance;
 }
-
 /**
  * Apply damage reduction to a base damage value
  * @param {number} baseDamage - Initial damage amount
@@ -28,10 +25,9 @@ function calculateCritical(critChance) {
  * @returns {number} Final damage after reduction
  */
 function applyDamageReduction(baseDamage, damageReduction) {
-  const reductionMultiplier = Math.min(0.8, damageReduction / 100); // Cap at 80%
+  const reductionMultiplier = Math.min(0.8, damageReduction / 100); 
   return Math.max(1, Math.round(baseDamage * (1 - reductionMultiplier)));
 }
-
 /**
  * Check if a character has enough mana for an ability
  * @param {Object} character - Character object
@@ -41,7 +37,6 @@ function applyDamageReduction(baseDamage, damageReduction) {
 function hasEnoughMana(character, ability) {
   return !ability.manaCost || character.currentMana >= ability.manaCost;
 }
-
 /**
  * Create a battle log entry with standardized structure
  * @param {number} time - Battle time in seconds
@@ -55,23 +50,22 @@ function createLogEntry(time, message, options = {}) {
     message,
     sourceId: options.sourceId || null,
     targetId: options.targetId || null,
-    actionType: options.actionType || null, // 'ability', 'attack', 'effect', 'system', etc.
+    actionType: options.actionType || null, 
     abilityId: options.abilityId || null,
-    abilityName: options.abilityName || null, // Added for easier client-side ability lookup
+    abilityName: options.abilityName || null, 
     damage: options.damage || null,
-    damageType: options.damageType || null, // 'physical', 'magic'
-    effectType: options.effectType || null, // For buffs, debuffs, DoTs, etc.
+    damageType: options.damageType || null, 
+    effectType: options.effectType || null, 
     effectName: options.effectName || null,
     effectAmount: options.effectAmount || null,
     effectDuration: options.effectDuration || null,
     healAmount: options.healAmount || null,
     manaChange: options.manaChange || null,
-    manaCost: options.manaCost || null, // Add specific field for ability mana cost
+    manaCost: options.manaCost || null, 
     isCritical: options.isCritical || false,
     isSystem: options.isSystem || false
   };
 }
-
 /**
  * Get effective attack speed with modifiers
  * @param {Object} character - Character with attackSpeed and buffs
@@ -79,8 +73,6 @@ function createLogEntry(time, message, options = {}) {
  */
 function getEffectiveAttackSpeed(character) {
   let attackSpeedModifier = 1.0;
-  
-  // Apply attack speed reduction debuffs
   if (character.buffs) {
     character.buffs.forEach(buff => {
       if (buff.type === 'attackSpeedReduction') {
@@ -88,10 +80,8 @@ function getEffectiveAttackSpeed(character) {
       }
     });
   }
-  
   return character.stats.attackSpeed * attackSpeedModifier;
 }
-
 module.exports = {
   randomInt,
   calculateCritical,

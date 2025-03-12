@@ -5,7 +5,6 @@ class EventBus {
   constructor() {
     this.events = {};
   }
-
 /**
    * Subscribe to an event
    * @param {string} event - Event name
@@ -16,15 +15,11 @@ class EventBus {
     if (!this.events[event]) {
       this.events[event] = [];
     }
-    
     this.events[event].push(callback);
-    
-    // Return unsubscribe function
     return () => {
       this.events[event] = this.events[event].filter(cb => cb !== callback);
     };
   }
-
   /**
    * Publish an event
    * @param {string} event - Event name
@@ -37,7 +32,6 @@ class EventBus {
       });
     }
   }
-
   /**
    * Clear all events
    */

@@ -11,7 +11,6 @@ class GameUtils {
   randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
-
   /**
    * Format a stat value for display
    * @param {string} stat - Stat name
@@ -36,7 +35,6 @@ class GameUtils {
         return value;
     }
   }
-
   /**
    * Format a date for display
    * @param {string} dateString - ISO date string
@@ -46,7 +44,6 @@ class GameUtils {
     const date = new Date(dateString);
     return date.toLocaleString();
   }
-
   /**
    * Format a time duration in seconds to mm:ss format
    * @param {number} seconds - Time in seconds
@@ -57,7 +54,6 @@ class GameUtils {
     const secs = Math.floor(seconds % 60);
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   }
-
   /**
    * Calculate a percentage safely (avoiding division by zero)
    * @param {number} value - Current value
@@ -68,7 +64,6 @@ class GameUtils {
     if (max <= 0) return 0;
     return (value / max) * 100;
   }
-
   /**
    * Get the appropriate class for an ability card based on its type
    * @param {Object} ability - Ability object
@@ -76,7 +71,6 @@ class GameUtils {
    */
   getAbilityCardClass(ability) {
     if (!ability) return '';
-    
     if (ability.healEffect) {
       return 'heal';
     } else if (ability.buffEffect) {
@@ -86,10 +80,9 @@ class GameUtils {
     } else if (ability.dotEffect) {
       return 'dot';
     } else {
-      return ability.type; // 'magic' or 'physical'
+      return ability.type; 
     }
   }
-
   /**
    * Get a user-friendly ability type label
    * @param {Object} ability - Ability object
@@ -97,7 +90,6 @@ class GameUtils {
    */
   getAbilityTypeLabel(ability) {
     if (!ability) return '';
-    
     if (ability.healEffect) {
       return 'Heal';
     } else if (ability.buffEffect) {
@@ -113,7 +105,6 @@ class GameUtils {
       return ability.type === 'magic' ? 'Magic' : 'Physical';
     }
   }
-
   /**
    * Debounce a function call
    * @param {Function} func - Function to debounce

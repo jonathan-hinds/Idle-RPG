@@ -16,45 +16,32 @@ class AbilityModel {
       PERIODIC: 'periodic'
     };
   }
-
   /**
    * Define effect types with their properties
    * @returns {Object} Effect type definitions
    */
 static getEffectTypes() {
   return {
-    // Buffs
     DAMAGE_INCREASE: 'damageIncrease',
     PHYSICAL_REDUCTION: 'physicalReduction',
     MAGIC_REDUCTION: 'magicReduction',
     ATTACK_SPEED_REDUCTION: 'attackSpeedReduction',
-    
-    // DoTs
     POISON: 'poison',
     BURNING: 'burning',
-    
-    // Control Effects
     STUN: 'stun',
-    
-    // Periodic effects
     MANA_DRAIN: 'manaDrain',
     REGENERATION: 'regeneration',
     MANA_REGEN: 'manaRegen',
-    
-    // Heal effects
     SELF_HEAL: 'selfHeal'
   };
 }
-
   /**
    * Get effect type registry with display properties
    * @returns {Object} Effect registry
    */
 static getEffectRegistry() {
   const EffectTypes = this.getEffectTypes();
-  
   return {
-    // Buff effects
     [EffectTypes.DAMAGE_INCREASE]: {
       displayName: 'Damage Increase',
       iconClass: 'buff-icon',
@@ -75,8 +62,6 @@ static getEffectRegistry() {
       iconClass: 'speed-reduction-icon',
       description: 'Reduces attack speed by {amount}%'
     },
-    
-    // DoT effects
     [EffectTypes.POISON]: {
       displayName: 'Poison',
       iconClass: 'dot-icon',
@@ -87,16 +72,12 @@ static getEffectRegistry() {
       iconClass: 'dot-icon',
       description: 'Takes {damage} damage every {interval} seconds'
     },
-    
-    // Control effects
     [EffectTypes.STUN]: {
       displayName: 'Stunned',
       iconClass: 'stun-icon',
       description: 'Skips next attack',
       temporary: true
     },
-    
-    // Periodic effects
     [EffectTypes.MANA_DRAIN]: {
       displayName: 'Mana Drain',
       iconClass: 'periodic-icon',
@@ -112,8 +93,6 @@ static getEffectRegistry() {
       iconClass: 'buff-icon',
       description: 'Regenerates {amount} mana every {interval} seconds'
     },
-    
-    // Heal effects
     [EffectTypes.SELF_HEAL]: {
       displayName: 'Healing',
       iconClass: 'buff-icon',
@@ -123,7 +102,6 @@ static getEffectRegistry() {
     }
   };
 }
-
   /**
    * Get details for an effect type
    * @param {string} effectType - Effect type
@@ -137,7 +115,6 @@ static getEffectRegistry() {
       description: 'Unknown effect'
     };
   }
-
   /**
    * Create an effect object
    * @param {string} effectType - Effect type
@@ -147,13 +124,10 @@ static getEffectRegistry() {
    */
   static createEffectObject(effectType, name, params = {}) {
     const details = this.getEffectDetails(effectType);
-    
-    // Replace placeholders in description with actual values
     let description = details.description;
     Object.entries(params).forEach(([key, value]) => {
       description = description.replace(`{${key}}`, value);
     });
-    
     return {
       name: name || details.displayName,
       type: effectType,

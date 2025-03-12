@@ -1,18 +1,13 @@
 const fs = require('fs');
 const path = require('path');
-
 const dataDir = path.join(__dirname, '..', 'data');
-
 /**
  * Ensures that all required data files exist
  */
 function ensureDataFiles() {
-  // Create data directory if it doesn't exist
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir);
   }
-
-  // Initialize JSON files if they don't exist
   const dataFiles = ['players.json', 'characters.json', 'abilities.json', 'battlelogs.json', 'challenges.json'];
   dataFiles.forEach(file => {
     const filePath = path.join(dataDir, file);
@@ -21,7 +16,6 @@ function ensureDataFiles() {
     }
   });
 }
-
 /**
  * Reads data from a JSON file
  * @param {string} file - Filename in the data directory
@@ -37,7 +31,6 @@ function readDataFile(file) {
     return [];
   }
 }
-
 /**
  * Writes data to a JSON file
  * @param {string} file - Filename in the data directory
@@ -54,7 +47,6 @@ function writeDataFile(file, data) {
     return false;
   }
 }
-
 module.exports = {
   ensureDataFiles,
   readDataFile,

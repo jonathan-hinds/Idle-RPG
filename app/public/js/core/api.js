@@ -17,19 +17,16 @@ class API {
           ...options.headers
         }
       });
-      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'API request failed');
       }
-      
       return await response.json();
     } catch (error) {
       console.error(`API error (${endpoint}):`, error);
       throw error;
     }
   }
-
   /**
    * Get authentication status
    * @returns {Promise<Object>} Authentication status
@@ -37,7 +34,6 @@ class API {
   async getAuthStatus() {
     return this._request('/api/auth/status');
   }
-
   /**
    * Login with username and password
    * @param {string} username - Username
@@ -50,7 +46,6 @@ class API {
       body: JSON.stringify({ username, password })
     });
   }
-
   /**
    * Register a new user
    * @param {string} username - Username
@@ -63,7 +58,6 @@ class API {
       body: JSON.stringify({ username, password })
     });
   }
-
   /**
    * Logout the current user
    * @returns {Promise<Object>} Logout response
@@ -71,7 +65,6 @@ class API {
   async logout() {
     return this._request('/api/logout');
   }
-
   /**
    * Get all abilities
    * @returns {Promise<Array>} List of abilities
@@ -81,7 +74,6 @@ class API {
     window.GameState.setAbilities(abilities);
     return abilities;
   }
-
   /**
    * Get all player characters
    * @returns {Promise<Array>} List of characters
@@ -91,7 +83,6 @@ class API {
     window.GameState.setCharacters(characters);
     return characters;
   }
-
   /**
    * Get a specific character
    * @param {string} characterId - Character ID
@@ -100,7 +91,6 @@ class API {
   async getCharacter(characterId) {
     return this._request(`/api/characters/${characterId}`);
   }
-
   /**
    * Create a new character
    * @param {string} name - Character name
@@ -112,11 +102,9 @@ class API {
       method: 'POST',
       body: JSON.stringify({ name, attributes })
     });
-    
     window.GameState.addCharacter(character);
     return character;
   }
-
   /**
    * Update character rotation
    * @param {string} characterId - Character ID
@@ -129,11 +117,9 @@ class API {
       method: 'PUT',
       body: JSON.stringify({ rotation, attackType })
     });
-    
     window.GameState.updateCharacter(character);
     return character;
   }
-
   /**
    * Get all battles for the player
    * @returns {Promise<Array>} List of battles
@@ -143,7 +129,6 @@ class API {
     window.GameState.setBattles(battles);
     return battles;
   }
-
   /**
    * Get a specific battle
    * @param {string} battleId - Battle ID
@@ -152,7 +137,6 @@ class API {
   async getBattle(battleId) {
     return this._request(`/api/battles/${battleId}`);
   }
-
   /**
    * Start a battle between two characters
    * @param {string} characterId - Player character ID
@@ -164,11 +148,9 @@ class API {
       method: 'POST',
       body: JSON.stringify({ characterId, opponentId })
     });
-    
     window.GameState.addBattle(battleResult);
     return battleResult;
   }
-
   /**
    * Join the matchmaking queue
    * @param {string} characterId - Character ID
@@ -180,7 +162,6 @@ class API {
       body: JSON.stringify({ characterId })
     });
   }
-
   /**
    * Leave the matchmaking queue
    * @param {string} characterId - Character ID
@@ -191,7 +172,6 @@ class API {
       method: 'DELETE'
     });
   }
-
   /**
    * Check queue status
    * @param {string} characterId - Character ID
@@ -200,7 +180,6 @@ class API {
   async checkQueueStatus(characterId) {
     return this._request(`/api/battles/queue/${characterId}`);
   }
-  
     /**
    * Update character attributes
    * @param {string} characterId - Character ID
@@ -212,7 +191,6 @@ class API {
       method: 'PUT',
       body: JSON.stringify({ attributes })
     });
-
     window.GameState.updateCharacter(character);
     return character;
   }
@@ -227,7 +205,6 @@ class API {
       body: JSON.stringify({ characterId })
     });
   }
-
   /**
    * Process a challenge round
    * @param {string} challengeId - Challenge ID
@@ -238,7 +215,6 @@ class API {
       method: 'POST'
     });
   }
-
   /**
    * Get all challenges for the player
    * @returns {Promise<Array>} List of challenges
@@ -248,7 +224,6 @@ class API {
     window.GameState.setChallenges(challenges);
     return challenges;
   }
-
   /**
    * Get a specific challenge
    * @param {string} challengeId - Challenge ID
@@ -257,7 +232,6 @@ class API {
   async getChallenge(challengeId) {
     return this._request(`/api/challenges/${challengeId}`);
   }
-
    /**
    * Create a new challenge
    * @param {string} characterId - Character ID
@@ -269,7 +243,6 @@ class API {
       body: JSON.stringify({ characterId })
     });
   }
-
   /**
    * Start a challenge battle
    * @param {string} characterId - Character ID
@@ -280,7 +253,6 @@ class API {
       method: 'POST'
     });
   }
-
   /**
    * Reset a challenge
    * @param {string} characterId - Character ID
@@ -291,7 +263,6 @@ class API {
       method: 'DELETE'
     });
   }
-
   /**
    * Collect challenge experience
    * @param {string} characterId - Character ID
@@ -302,7 +273,6 @@ class API {
       method: 'POST'
     });
   }
-  
   /**
    * Continue a challenge
    * @param {string} challengeId - Challenge ID
@@ -313,7 +283,6 @@ class API {
       method: 'POST'
     });
   } 
-  
   /**
  * Get all items
  * @returns {Promise<Array>} List of items
@@ -322,7 +291,6 @@ async getItems() {
   const items = await this._request('/api/items');
   return items;
 }
-
 /**
  * Get character inventory
  * @param {string} characterId - Character ID
@@ -331,7 +299,6 @@ async getItems() {
 async getInventory(characterId) {
   return this._request(`/api/items/inventory/${characterId}`);
 }
-
 /**
  * Buy an item for a character
  * @param {string} characterId - Character ID
@@ -344,7 +311,6 @@ async buyItem(characterId, itemId) {
     body: JSON.stringify({ characterId, itemId })
   });
 }
-
 /**
  * Equip an item for a character
  * @param {string} characterId - Character ID
@@ -357,7 +323,6 @@ async equipItem(characterId, itemId) {
     body: JSON.stringify({ characterId, itemId })
   });
 }
-
 /**
  * Unequip an item from a character
  * @param {string} characterId - Character ID
@@ -370,6 +335,4 @@ async unequipItem(characterId, slot) {
     body: JSON.stringify({ characterId, slot })
   });
 }
-  
-  
 }

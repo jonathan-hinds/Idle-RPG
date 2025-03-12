@@ -9,7 +9,6 @@ class Item {
     static getEquipmentSlots() {
       return ['head', 'chest', 'legs', 'mainHand', 'offHand'];
     }
-    
     /**
      * Format slot name for display
      * @param {string} slot - Slot key
@@ -22,7 +21,6 @@ class Item {
         default: return slot.charAt(0).toUpperCase() + slot.slice(1);
       }
     }
-    
     /**
      * Format item type for display
      * @param {string} type - Item type
@@ -31,7 +29,6 @@ class Item {
     static formatItemType(type) {
       return type.charAt(0).toUpperCase() + type.slice(1);
     }
-    
     /**
      * Get effect description for an item
      * @param {Object} effect - Item effect data
@@ -39,7 +36,6 @@ class Item {
      */
     static getEffectDescription(effect) {
       if (!effect) return '';
-      
       switch(effect.type) {
         case 'stun':
           return `${effect.chance}% chance to stun on basic attack`;

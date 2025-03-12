@@ -6,7 +6,6 @@ class AuthController {
     this._initElements();
     this._initEventListeners();
   }
-
   /**
    * Initialize DOM elements
    */
@@ -19,42 +18,32 @@ class AuthController {
       logoutBtn: document.getElementById('logout-btn')
     };
   }
-
   /**
    * Initialize event listeners
    */
   _initEventListeners() {
-    // Login form
     if (this.elements.loginForm) {
       this.elements.loginForm.addEventListener('submit', (e) => this.handleLogin(e));
     }
-    
-    // Register form
     if (this.elements.registerForm) {
       this.elements.registerForm.addEventListener('submit', (e) => this.handleRegister(e));
     }
-    
-    // Logout button
     if (this.elements.logoutBtn) {
       this.elements.logoutBtn.addEventListener('click', () => this.handleLogout());
     }
   }
-
   /**
    * Check if user is already logged in
    */
   async checkAuthStatus() {
     try {
       const response = await window.API.getAuthStatus();
-      
       if (response.authenticated) {
-        // User is logged in
         window.GameState.loggedIn = true;
         window.GameState.playerId = response.playerId;
         this.showGameContent();
         window.EventBus.publish('auth:login-success');
       } else {
-        // User is not logged in
         window.GameState.loggedIn = false;
         this.showLoginForm();
       }
@@ -64,16 +53,13 @@ class AuthController {
       this.showLoginForm();
     }
   }
-
   /**
    * Handle login form submission
    */
   async handleLogin(event) {
     event.preventDefault();
-    
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
-    
     try {
       const data = await window.API.login(username, password);
       window.GameState.loggedIn = true;
@@ -86,16 +72,13 @@ class AuthController {
       window.Notification.show(error.message || 'Login failed', 'error');
     }
   }
-
   /**
    * Handle register form submission
    */
   async handleRegister(event) {
     event.preventDefault();
-    
     const username = document.getElementById('register-username').value;
     const password = document.getElementById('register-password').value;
-    
     try {
       const data = await window.API.register(username, password);
       window.GameState.loggedIn = true;
@@ -108,7 +91,6 @@ class AuthController {
       window.Notification.show(error.message || 'Registration failed', 'error');
     }
   }
-
   /**
    * Handle logout
    */
@@ -124,7 +106,6 @@ class AuthController {
       console.error('Error during logout:', error);
     }
   }
-
   /**
    * Show the game content
    */
@@ -132,7 +113,6 @@ class AuthController {
     this.elements.loginRegisterSection.classList.add('d-none');
     this.elements.gameContentSection.classList.remove('d-none');
   }
-
   /**
    * Show the login form
    */
