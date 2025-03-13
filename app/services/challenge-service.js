@@ -146,19 +146,25 @@ function updateChallengeAfterBattle(character, challenge, opponent, battleResult
     console.error('Challenge not found:', challenge.id);
     return;
   }
+  
   const isPlayerWinner = battleResult.winner === character.id;
+  
+  // Only increment the round if the player won
   if (isPlayerWinner) {
     challenge.round += 1;
-    challenge.expGained += calculateChallengeExp(challenge.round);
+    challenge.expGained += calculateChallengeExp(challenge.round - 1); // Use current round for exp
     challenge.geneticMemory.push({
       attributes: opponent.attributes,
       rotation: opponent.rotation,
       attackType: opponent.attackType,
       fitness: calculateOpponentFitness(opponent, character, battleResult)
     });
+    
     if (challenge.geneticMemory.length > 10) {
       challenge.geneticMemory.shift(); 
     }
+    
+    // Generate next opponent - using character's current level
     const totalAttributePoints = calculateTotalAttributePoints(character.attributes);
     if (challenge.geneticMemory.length > 1) {
       const population = generatePopulation(character, challenge);
@@ -173,14 +179,17 @@ function updateChallengeAfterBattle(character, challenge, opponent, battleResult
         character.level
       );
     }
+    
     if (!challenge.currentOpponent.id || !challenge.currentOpponent.id.startsWith('npc-')) {
       challenge.currentOpponent.id = `npc-${uuidv4()}`;
     }
   } else {
+    // If the player lost, don't increment the round, just update the opponent's level if needed
     if (challenge.currentOpponent && challenge.currentOpponent.level !== character.level) {
       challenge.currentOpponent.level = character.level;
     }
   }
+  
   challenge.lastBattleId = battleResult.id;
   challenge.updatedAt = new Date().toISOString();
   challenges[index] = challenge;

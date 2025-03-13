@@ -10,74 +10,97 @@ class ChallengeController {
   /**
    * Initialize DOM elements
    */
-  _initElements() {
-    this.elements = {
-      startChallengeBtn: document.getElementById('start-challenge-btn'),
-      continueChallengeBtn: document.getElementById('continue-challenge-btn'),
-      resetChallengeBtn: document.getElementById('reset-challenge-btn'),
-      collectExpBtn: document.getElementById('collect-exp-btn'),
-      challengeTab: document.getElementById('challenge-tab')
-    };
-  }
+_initElements() {
+  this.elements = {
+    challengeBtn: document.getElementById('challenge-btn'),
+    resetChallengeBtn: document.getElementById('reset-challenge-btn'),
+    collectExpBtn: document.getElementById('collect-exp-btn'),
+    challengeTab: document.getElementById('challenge-tab')
+  };
+}
   /**
    * Initialize event listeners
    */
-  _initEventListeners() {
-    if (this.elements.challengeTab) {
-      this.elements.challengeTab.addEventListener('shown.bs.tab', () => {
-        if (window.GameState.selectedCharacter) {
-          this.loadChallenge();
-        }
-      });
-    }
-    if (this.elements.startChallengeBtn) {
-      this.elements.startChallengeBtn.addEventListener('click', () => this.startChallenge());
-    }
-    if (this.elements.continueChallengeBtn) {
-      this.elements.continueChallengeBtn.addEventListener('click', () => this.continueChallengeRound());
-    }
-    if (this.elements.resetChallengeBtn) {
-      this.elements.resetChallengeBtn.addEventListener('click', () => this.resetChallenge());
-    }
-    if (this.elements.collectExpBtn) {
-      this.elements.collectExpBtn.addEventListener('click', () => this.collectExperience());
-    }
-    window.EventBus.subscribe('character:selected', () => {
-      if (this.elements.challengeTab.classList.contains('active')) {
+_initEventListeners() {
+  if (this.elements.challengeTab) {
+    this.elements.challengeTab.addEventListener('shown.bs.tab', () => {
+      if (window.GameState.selectedCharacter) {
         this.loadChallenge();
       }
     });
   }
+  
+  if (this.elements.challengeBtn) {
+    this.elements.challengeBtn.addEventListener('click', () => this.startChallengeBattle());
+  }
+  
+  if (this.elements.resetChallengeBtn) {
+    this.elements.resetChallengeBtn.addEventListener('click', () => this.resetChallenge());
+  }
+  
+  if (this.elements.collectExpBtn) {
+    this.elements.collectExpBtn.addEventListener('click', () => this.collectExperience());
+  }
+  
+  window.EventBus.subscribe('character:selected', () => {
+    if (this.elements.challengeTab.classList.contains('active')) {
+      this.loadChallenge();
+    }
+  });
+}
+
   /**
    * Load challenge data for the selected character
    */
-  async loadChallenge() {
-    if (!window.GameState.selectedCharacter) return;
-    try {
-      const challenge = await window.API.getChallenge(window.GameState.selectedCharacter.id);
-      window.GameState.setChallenge(challenge);
-      window.ChallengeUI.showChallengeStatus(challenge);
-    } catch (error) {
-      console.error('Error loading challenge:', error);
-      window.Notification.error('Failed to load challenge data');
-    }
+async loadChallenge() {
+  if (!window.GameState.selectedCharacter) return;
+  try {
+    const challenge = await window.API.getChallenge(window.GameState.selectedCharacter.id);
+    window.GameState.setChallenge(challenge);
+    window.ChallengeUI.showChallengeStatus(challenge);
+  } catch (error) {
+    console.error('Error loading challenge:', error);
+    window.Notification.error('Failed to load challenge data');
   }
+}
   /**
    * Start a new challenge
    */
-  async startChallenge() {
-    if (!window.GameState.selectedCharacter) return;
-    if (this.isChallengeInProgress) return;
-    try {
-      const challenge = await window.API.createChallenge(window.GameState.selectedCharacter.id);
+async startChallengeBattle() {
+  if (!window.GameState.selectedCharacter) return;
+  if (this.isChallengeInProgress) return;
+  
+  this.isChallengeInProgress = true;
+  try {
+    // If no challenge exists yet, create one first
+    let challenge = window.GameState.challenge;
+    if (!challenge) {
+      challenge = await window.API.createChallenge(window.GameState.selectedCharacter.id);
       window.GameState.setChallenge(challenge);
-      window.ChallengeUI.showChallengeStatus(challenge);
-      this.continueChallengeRound();
-    } catch (error) {
-      console.error('Error starting challenge:', error);
-      window.Notification.error('Failed to start challenge');
     }
+    
+    // Start the battle with the current opponent
+    const result = await window.API.startChallengeBattle(window.GameState.selectedCharacter.id);
+    window.GameState.addBattle(result.battle);
+    window.GameState.setChallenge(result.challenge);
+    
+    const isPlayerWinner = result.battle.winner === window.GameState.selectedCharacter.id;
+    window.BattleUI.showRealTimeBattle(
+      result.battle, 
+      window.GameState.selectedCharacter, 
+      true, 
+      () => {
+        this.isChallengeInProgress = false;
+        window.ChallengeUI.showChallengeRoundResult(result.battle, result.challenge, isPlayerWinner);
+        window.ChallengeUI.showChallengeStatus(result.challenge);
+      }
+    );
+  } catch (error) {
+    this.isChallengeInProgress = false;
+    console.error('Error in challenge battle:', error);
+    window.Notification.error('Failed to start challenge battle');
   }
+}
   /**
    * Continue to the next challenge round
    */

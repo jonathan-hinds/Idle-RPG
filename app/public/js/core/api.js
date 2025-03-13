@@ -229,9 +229,9 @@ class API {
    * @param {string} challengeId - Challenge ID
    * @returns {Promise<Object>} Challenge data
    */
-  async getChallenge(challengeId) {
-    return this._request(`/api/challenges/${challengeId}`);
-  }
+async getChallenge(characterId) {
+  return this._request(`/api/challenges/${characterId}`);
+}
    /**
    * Create a new challenge
    * @param {string} characterId - Character ID
@@ -248,11 +248,11 @@ class API {
    * @param {string} characterId - Character ID
    * @returns {Promise<Object>} Battle result and updated challenge
    */
-  async startChallengeBattle(characterId) {
-    return this._request(`/api/challenges/${characterId}/battle`, {
-      method: 'POST'
-    });
-  }
+async startChallengeBattle(characterId) {
+  return this._request(`/api/challenges/${characterId}/battle`, {
+    method: 'POST'
+  });
+}
   /**
    * Reset a challenge
    * @param {string} characterId - Character ID

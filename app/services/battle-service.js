@@ -17,7 +17,17 @@ const { readDataFile, writeDataFile } = require('../utils/data-utils');
  * @param {boolean} isMatchmade - Whether battle is from matchmaking
  * @returns {Object} Battle result
  */
+/**
+ * Simulate a battle between two characters
+ * @param {Object} character1 - First character
+ * @param {Object} character2 - Second character
+ * @param {boolean} isMatchmade - Whether battle is from matchmaking
+ * @returns {Object} Battle result
+ */
 function simulateBattle(character1, character2, isMatchmade = false) {
+  // Initialize or clear global debug logs array
+  global.currentBattleDebugLogs = [];
+  
   const char1 = JSON.parse(JSON.stringify(character1));
   const char2 = JSON.parse(JSON.stringify(character2));
   const battleState = createBattleState(
@@ -66,7 +76,15 @@ function simulateBattle(character1, character2, isMatchmade = false) {
   determineWinner(battleState, battleTime);
   dumpCharacterState(battleState.character1, "Battle end");
   dumpCharacterState(battleState.character2, "Battle end");
-  return formatBattleResult(battleState, isMatchmade);
+  
+  // Add debug logs to the battle result
+  const battleResult = formatBattleResult(battleState, isMatchmade);
+  battleResult.debugLogs = global.currentBattleDebugLogs || [];
+  
+  // Clear global variable
+  global.currentBattleDebugLogs = null;
+  
+  return battleResult;
 }
 /**
  * Determine the winner of a battle
@@ -226,7 +244,34 @@ function processAttack(battleState, attacker, defender, time) {
   }
   performBasicAttack(battleState, attacker, defender, time);
 }
+
+/**
+ * Log character state for debugging
+ * @param {Object} character - Character to log
+ * @param {string} label - Label for the log
+ */
 function dumpCharacterState(character, label) {
+  // Create a structured log object
+  const stateLog = {
+    label: label,
+    name: character.name,
+    health: `${character.currentHealth}/${character.stats.health}`,
+    mana: `${character.currentMana}/${character.stats.mana}`,
+    buffs: character.buffs,
+    effects: character.periodicEffects,
+    cooldowns: character.cooldowns,
+    timestamp: new Date().toISOString()
+  };
+
+  // If we're in a battle context that will be returned to client
+  if (global.currentBattleDebugLogs) {
+    if (!Array.isArray(global.currentBattleDebugLogs)) {
+      global.currentBattleDebugLogs = [];
+    }
+    global.currentBattleDebugLogs.push(stateLog);
+  }
+
+  // Still log to server console for debugging
   console.log(`[STATE DUMP] ${label} - ${character.name}:`);
   console.log(`  Health: ${character.currentHealth}/${character.stats.health}`);
   console.log(`  Mana: ${character.currentMana}/${character.stats.mana}`);
