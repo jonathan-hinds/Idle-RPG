@@ -1,1318 +1,1290 @@
-const { createBattleState, initializeBattleLog, formatBattleResult } = require('../models/battle-model');
-const { createBattleState: createCharacterBattleState } = require('../models/character-model');
-const { getAbility } = require('./ability-service');
-const { 
-  randomInt, 
-  calculateCritical, 
-  applyDamageReduction,
-  hasEnoughMana,
-  createLogEntry,
-  getEffectiveAttackSpeed
-} = require('../utils/battle-utils');
-const { readDataFile, writeDataFile } = require('../utils/data-utils');
 /**
- * Simulate a battle between two characters
- * @param {Object} character1 - First character
- * @param {Object} character2 - Second character
- * @param {boolean} isMatchmade - Whether battle is from matchmaking
- * @returns {Object} Battle result
+ * Battle visualization
+ */
+class BattleUI {
+  constructor() {
+    this._initElements();
+    this.battleEngine = new BattleEngine();
+  }
+  /**
+   * Initialize UI elements
+   */
+  _initElements() {
+    this.elements = {
+      battleHistory: document.getElementById('battle-history'),
+      battleDetails: document.getElementById('battle-details'),
+      battleTitle: document.getElementById('battle-title'),
+      battleLog: document.getElementById('battle-log'),
+      opponentsList: document.getElementById('opponents-list'),
+      battleModal: null,
+      battleCharacterName: document.getElementById('battle-character-name'),
+      battleOpponentName: document.getElementById('battle-opponent-name'),
+      battleCharacterHealth: document.getElementById('battle-character-health'),
+      battleOpponentHealth: document.getElementById('battle-opponent-health'),
+      battleCharacterMana: document.getElementById('battle-character-mana'),
+      battleOpponentMana: document.getElementById('battle-opponent-mana'),
+      liveBattleLog: document.getElementById('live-battle-log'),
+      battleCharacterEffects: document.getElementById('battle-character-effects'),
+      battleOpponentEffects: document.getElementById('battle-opponent-effects'),
+      battleModalClose: document.getElementById('battle-modal-close')
+    };
+    if (document.getElementById('battle-modal')) {
+      this.elements.battleModal = new bootstrap.Modal(document.getElementById('battle-modal'));
+    }
+  }
+  /**
+   * Render opponents list
+   * @param {Array} opponents - List of opponents
+   */
+  renderOpponentsList(opponents) {
+    const container = this.elements.opponentsList;
+    if (!opponents || opponents.length === 0) {
+      container.innerHTML = '<div class="alert alert-info">No opponents available.</div>';
+      return;
+    }
+    container.innerHTML = '<div class="list-group">' + 
+      opponents.map(opponent => `
+        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+          <div>
+            <h5>${opponent.name}</h5>
+            <small>
+              STR: ${opponent.attributes.strength} | 
+              AGI: ${opponent.attributes.agility} | 
+              STA: ${opponent.attributes.stamina} | 
+              INT: ${opponent.attributes.intellect} | 
+              WIS: ${opponent.attributes.wisdom}
+            </small>
+          </div>
+          <button class="btn btn-sm btn-danger start-battle-btn" data-opponent-id="${opponent.id}">
+            Battle
+          </button>
+        </div>
+      `).join('') + '</div>';
+  }
+  /**
+   * Render battle history
+   * @param {Array} battles - List of battles
+   * @param {string} selectedCharacterId - ID of selected character
+   */
+  renderBattleHistory(battles, selectedCharacterId) {
+    const container = this.elements.battleHistory;
+    if (!battles || battles.length === 0) {
+      container.innerHTML = '<div class="alert alert-info">No battles yet.</div>';
+      return;
+    }
+    container.innerHTML = '<div class="list-group">' + 
+      battles.map(battle => {
+        const isWinner = battle.winner === selectedCharacterId;
+        const isCharacter = battle.character.id === selectedCharacterId;
+        const opponent = isCharacter ? battle.opponent : battle.character;
+        return `
+          <div class="list-group-item battle-entry" data-battle-id="${battle.id}">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h5>Battle vs ${opponent.name}</h5>
+                <small>${new Date(battle.timestamp).toLocaleString()}</small>
+              </div>
+              <span class="badge ${isWinner ? 'bg-success' : 'bg-danger'} rounded-pill">
+                ${isWinner ? 'Victory' : 'Defeat'}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('') + '</div>';
+  }
+  /**
+ * Add a new battle log entry with appropriate styling class
+ * @param {HTMLElement} container - Log container
+ * @param {Object} entry - Log entry with time and message
+ * @param {Object} battleState - Current battle state
+ */
+_addBattleLogEntryToUI(container, entry, battleState) {
+  const entryElement = document.createElement('div');
+  const entryType = this._classifyLogEntry(entry, battleState);
+  entryElement.className = `battle-log-entry battle-log-entry-${entryType}`;
+  entryElement.innerHTML = `<span class="battle-log-time">[${entry.time.toFixed(1)}s]</span> ${entry.message}`;
+  container.appendChild(entryElement);
+  container.scrollTop = container.scrollHeight;
+}
+/**
+ * Classify a log entry message as character, opponent, or neutral
+ * @param {string} message - The log message
+ * @param {Object} battleState - Current battle state
+ * @returns {string} Classification: 'character', 'opponent', or 'neutral'
+ */
+_classifyLogEntry(entry, battleState) {
+  return this._classifyIdBasedEntry(entry, battleState);
+}
+  /**
+ * Escape special characters in string for use in a RegExp
+ * @param {string} string - String to escape
+ * @returns {string} Escaped string
+ */
+_escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+/**
+ * Fallback classification for legacy log entries without IDs
+ * @param {string} message - The log message
+ * @param {Object} battleState - Current battle state
+ * @returns {string} Classification: 'character', 'opponent', or 'neutral'
+ */
+_classifyLegacyLogEntry(message, battleState) {
+  const { character, opponent } = battleState;
+  if (this._isSystemMessage(message)) {
+    return 'neutral';
+  }
+  const characterRegex = new RegExp(`^${this._escapeRegExp(character.name)}(\\s|:|\\.|,|'|\\(|\\)|$)`);
+  const opponentRegex = new RegExp(`^${this._escapeRegExp(opponent.name)}(\\s|:|\\.|,|'|\\(|\\)|$)`);
+  if (characterRegex.test(message)) {
+    return 'character';
+  }
+  if (opponentRegex.test(message)) {
+    return 'opponent';
+  }
+  if (message.includes(` ${character.name} for `) && !message.startsWith(character.name)) {
+    return 'opponent';
+  }
+  if (message.includes(` ${opponent.name} for `) && !message.startsWith(opponent.name)) {
+    return 'character';
+  }
+  return 'neutral';
+}
+/**
+ * Check if a message is a system message
+ * @param {string} message - Message to check
+ * @returns {boolean} True if the message is a system message
+ */
+_isSystemMessage(message) {
+  if (message.startsWith('Battle started') || 
+      message.includes('wins the battle') || 
+      message.includes('Battle has ended') ||
+      message.startsWith('Final state')) {
+    return true;
+  }
+  const effectPatterns = [
+    'is stunned',
+    'is affected by',
+    'has expired',
+    'takes damage from',
+    'has been defeated',
+    'skips their turn',
+    'regenerates',
+    'effect on'
+  ];
+  if (effectPatterns.some(pattern => message.includes(pattern))) {
+    return true;
+  }
+  const resourcePatterns = [
+    'loses',
+    'gains',
+    'is healed for'
+  ];
+  if (resourcePatterns.some(pattern => message.includes(pattern)) &&
+      !message.includes(' uses ') && 
+      !message.includes(' casts ')) {
+    return true;
+  }
+  return false;
+}
+/**
+ * Classify an entry based on source and target IDs
+ * @param {Object} entry - Log entry with sourceId and targetId
+ * @param {Object} battleState - Current battle state
+ * @returns {string} Classification: 'character', 'opponent', or 'neutral'
+ */
+_classifyIdBasedEntry(entry, battleState) {
+  if (entry.isSystem) {
+    return 'neutral';
+  }
+  const { character, opponent } = battleState;
+  if (entry.sourceId === character.id) {
+    return 'character';
+  }
+  if (entry.sourceId === opponent.id) {
+    return 'opponent';
+  }
+  if (entry.targetId === character.id && entry.sourceId !== character.id) {
+    return 'opponent';
+  }
+  if (entry.targetId === opponent.id && entry.sourceId !== opponent.id) {
+    return 'character';
+  }
+  return 'neutral';
+}
+/**
+ * Update the live battle log with a new entry
+ * Modified to use the new styling system
+ * @param {Object} battleState - Current battle state
+ * @param {Object} entry - Log entry to add
+ */
+_updateLiveBattleLog(battleState, entry) {
+  if (!this.elements.liveBattleLog) return;
+  this._addBattleLogEntryToUI(this.elements.liveBattleLog, entry, battleState);
+}
+  /**
+   * Show battle details
+   * @param {Object} battle - Battle data
+   * @param {string} selectedCharacterId - ID of selected character
+   */
+showBattleDetails(battle, selectedCharacterId) {
+  if (!battle) return;
+  this.elements.battleDetails.classList.remove('d-none');
+  const isCharacter = battle.character.id === selectedCharacterId;
+  const opponent = isCharacter ? battle.opponent : battle.character;
+  const character = isCharacter ? battle.character : battle.opponent;
+  this.elements.battleTitle.textContent = `Battle vs ${opponent.name}`;
+  const tempBattleState = {
+    character: character,
+    opponent: opponent
+  };
+  this.elements.battleLog.innerHTML = '';
+  battle.log.forEach(entry => {
+    this._addBattleLogEntryToUI(this.elements.battleLog, entry, tempBattleState);
+  });
+}
+/**
+ * Show real-time battle visualization
+ * Modified to store max health and mana in battleState
+ * @param {Object} battle - Battle data
+ * @param {Object} character - Selected character
  */
 /**
- * Simulate a battle between two characters
- * @param {Object} character1 - First character
- * @param {Object} character2 - Second character
- * @param {boolean} isMatchmade - Whether battle is from matchmaking
- * @returns {Object} Battle result
+ * Show real-time battle visualization
+ * Modified to store max health and mana in battleState
+ * @param {Object} battle - Battle data
+ * @param {Object} character - Selected character
  */
-function simulateBattle(character1, character2, isMatchmade = false) {
-  // Initialize or clear global debug logs array
-  global.currentBattleDebugLogs = [];
-  
-  const char1 = JSON.parse(JSON.stringify(character1));
-  const char2 = JSON.parse(JSON.stringify(character2));
-  const battleState = createBattleState(
-    createCharacterBattleState(char1),
-    createCharacterBattleState(char2)
+showRealTimeBattle(battle, character, isChallenge = false, onComplete = null) {
+  // Log debug information if available
+  if (battle.debugLogs && battle.debugLogs.length > 0) {
+    console.group('Battle Debug Logs');
+    battle.debugLogs.forEach(log => {
+      console.group(`[STATE DUMP] ${log.label} - ${log.name}`);
+      console.log(`Health: ${log.health}`);
+      console.log(`Mana: ${log.mana}`);
+      console.log('Buffs:', log.buffs);
+      console.log('Effects:', log.effects);
+      console.log('Cooldowns:', log.cooldowns);
+      console.log('Equipment:', log.equipment);
+      console.groupEnd();
+    });
+    
+    
+    console.groupEnd();
+  }
+
+  const battleState = {
+    character: battle.character.id === character.id ? battle.character : battle.opponent,
+    opponent: battle.character.id === character.id ? battle.opponent : battle.character,
+    log: battle.log,
+    currentLogIndex: 0,
+    startTime: new Date(),
+    isCharacter: battle.character.id === character.id,
+    characterHealth: 100,
+    opponentHealth: 100,
+    characterMana: 100,
+    opponentMana: 100,
+    characterCurrentHealth: battle.character.id === character.id ? 
+      battle.character.stats.health : battle.opponent.stats.health,
+    opponentCurrentHealth: battle.character.id === character.id ? 
+      battle.opponent.stats.health : battle.character.stats.health,
+    characterMaxHealth: battle.character.id === character.id ? 
+      battle.character.stats.health : battle.opponent.stats.health,
+    opponentMaxHealth: battle.character.id === character.id ? 
+      battle.opponent.stats.health : battle.character.stats.health,
+    characterCurrentMana: battle.character.id === character.id ? 
+      battle.character.stats.mana : battle.opponent.stats.mana,
+    opponentCurrentMana: battle.character.id === character.id ? 
+      battle.opponent.stats.mana : battle.character.stats.mana,
+    characterMaxMana: battle.character.id === character.id ? 
+      battle.character.stats.mana : battle.opponent.stats.mana,
+    opponentMaxMana: battle.character.id === character.id ? 
+      battle.opponent.stats.mana : battle.character.stats.mana,
+    characterEffects: [],
+    opponentEffects: [],
+    isFinished: false
+  };
+  this.elements.battleCharacterName.textContent = battleState.character.name;
+  this.elements.battleOpponentName.textContent = battleState.opponent.name;
+  this.elements.liveBattleLog.innerHTML = '<div class="text-center">Battle starting...</div>';
+  this._updateHealthDisplay(
+    this.elements.battleCharacterHealth, 
+    100, 
+    battleState.characterCurrentHealth, 
+    battleState.characterMaxHealth
   );
-  battleState.character1.nextAbilityIndex = 0;
-  battleState.character2.nextAbilityIndex = 0;
-  initializeBattleLog(battleState);
-  dumpCharacterState(battleState.character1, "Battle start");
-  dumpCharacterState(battleState.character2, "Battle start");
-  let char1NextAttack = 0;
-  let char2NextAttack = 0;
-  let battleTime = 0;
-  const maxBattleTime = 300; 
-  const timeStep = 0.1; 
-  let lastEffectProcessTime = 0;
-  while (
-    battleState.character1.currentHealth > 0 && 
-    battleState.character2.currentHealth > 0 && 
-    battleTime < maxBattleTime
-  ) {
-    const nextTime = Math.min(
-      char1NextAttack, 
-      char2NextAttack,
-      lastEffectProcessTime + timeStep
+  this._updateHealthDisplay(
+    this.elements.battleOpponentHealth, 
+    100, 
+    battleState.opponentCurrentHealth, 
+    battleState.opponentMaxHealth
+  );
+  this._updateManaDisplay(
+    this.elements.battleCharacterMana, 
+    100, 
+    battleState.characterCurrentMana, 
+    battleState.characterMaxMana
+  );
+  this._updateManaDisplay(
+    this.elements.battleOpponentMana, 
+    100, 
+    battleState.opponentCurrentMana, 
+    battleState.opponentMaxMana
+  );
+  this.elements.battleCharacterEffects.innerHTML = '';
+  this.elements.battleOpponentEffects.innerHTML = '';
+  this.elements.battleModal.show();
+  this._startBattleSimulation(battleState);
+  this.elements.battleModal._element.addEventListener('hidden.bs.modal', () => {
+    this._stopBattleSimulation();
+    if (isChallenge && onComplete) {
+      onComplete();
+    } else if (battleState.isFinished) {
+      this.showBattleDetails(battle, character.id);
+    }
+  }, { once: true });
+  if (isChallenge) {
+    const closeBtn = this.elements.battleModalClose;
+    closeBtn.setAttribute('disabled', 'disabled');
+    const checkFinished = setInterval(() => {
+      if (battleState.isFinished) {
+        closeBtn.removeAttribute('disabled');
+        clearInterval(checkFinished);
+      }
+    }, 500);
+  }
+}
+  /**
+   * Start the battle simulation
+   * @param {Object} battleState - Battle state
+   */
+/**
+ * Start the battle simulation
+ * @param {Object} battleState - Battle state
+ */
+_startBattleSimulation(battleState) {
+  this._stopBattleSimulation();
+  this.elements.liveBattleLog.innerHTML = '';
+  const processNextLogEntry = () => {
+    if (battleState.currentLogIndex >= battleState.log.length) {
+      battleState.isFinished = true;
+      this._stopBattleSimulation();
+      const winnerName = battleState.log
+        .filter(entry => entry.message && entry.message.includes(' wins the battle'))
+        .map(entry => entry.message.split(' wins')[0])[0] || null;
+      const finalMessageElement = document.createElement('div');
+      finalMessageElement.className = 'battle-log-entry battle-log-entry-neutral text-center mt-3';
+      finalMessageElement.innerHTML = winnerName 
+        ? `<strong>${winnerName} wins the battle!</strong>` 
+        : '<strong>Battle has ended.</strong>';
+      this.elements.liveBattleLog.appendChild(finalMessageElement);
+      this.elements.battleModalClose.classList.add('btn-primary');
+      this.elements.battleModalClose.classList.remove('btn-secondary');
+      this.elements.battleModalClose.textContent = 'View Results';
+      return;
+    }
+    const entry = battleState.log[battleState.currentLogIndex];
+    const entryTime = entry.time * 1000; 
+    const elapsedTime = new Date() - battleState.startTime;
+    if (elapsedTime >= entryTime) {
+      this._updateLiveBattleLog(battleState, entry);
+      this._updateResourceBars(entry, battleState);
+      battleState.currentLogIndex++;
+    }
+  };
+  this.simulationInterval = setInterval(processNextLogEntry, 100);
+}
+  /**
+   * Stop the battle simulation
+   */
+  _stopBattleSimulation() {
+    if (this.simulationInterval) {
+      clearInterval(this.simulationInterval);
+      this.simulationInterval = null;
+    }
+  }
+/**
+ * Update resource bars based on battle log entry
+ * @param {Object} entry - Log entry
+ * @param {Object} battleState - Battle state
+ */
+_updateResourceBars(entry, battleState) {
+  if (entry.actionType === 'final-state') {
+    this._processFinalState(entry, battleState);
+    return; 
+  }
+  if (entry.actionType === 'battle-end' || entry.actionType === 'battle-end-timeout' || 
+      entry.actionType === 'battle-end-draw') {
+    return;
+  }
+  if (entry.damage && (entry.actionType === 'physical-attack' || entry.actionType === 'magic-attack' || 
+      entry.actionType === 'periodic-damage')) {
+    if (entry.targetId === battleState.character.id) {
+      this._updateCharacterHealth(battleState, entry.damage);
+    } else if (entry.targetId === battleState.opponent.id) {
+      this._updateOpponentHealth(battleState, entry.damage);
+    }
+  }
+  if (entry.healAmount && (entry.actionType === 'heal' || entry.actionType === 'regeneration')) {
+    if (entry.targetId === battleState.character.id) {
+      this._updateCharacterHeal(battleState, entry.healAmount);
+    } else if (entry.targetId === battleState.opponent.id) {
+      this._updateOpponentHeal(battleState, entry.healAmount);
+    }
+  }
+  if (entry.manaChange !== undefined) {
+    if (entry.targetId === battleState.character.id) {
+      this._updateCharacterMana(battleState, entry.manaChange);
+    } else if (entry.targetId === battleState.opponent.id) {
+      this._updateOpponentMana(battleState, entry.manaChange);
+    }
+  }
+  if (entry.manaCost && entry.manaCost > 0) {
+    if (entry.sourceId === battleState.character.id) {
+      this._updateCharacterMana(battleState, -entry.manaCost);
+    } else if (entry.sourceId === battleState.opponent.id) {
+      this._updateOpponentMana(battleState, -entry.manaCost);
+    }
+  }
+  else if ((entry.actionType === 'physical-attack' || entry.actionType === 'magic-attack' ||
+            entry.actionType === 'cast-heal' || entry.actionType === 'ability-cast') && 
+           (entry.abilityId || entry.abilityName)) {
+    const abilityName = entry.abilityName || entry.abilityId;
+    if (abilityName !== 'Basic Attack' && abilityName !== 'Basic Magic Attack') {
+      const ability = window.GameState.abilities.find(a => 
+        a.name === abilityName || a.id === abilityName || a.id === entry.abilityId);
+      if (ability && ability.manaCost) {
+        if (entry.sourceId === battleState.character.id) {
+          this._updateCharacterMana(battleState, -ability.manaCost);
+        } else if (entry.sourceId === battleState.opponent.id) {
+          this._updateOpponentMana(battleState, -ability.manaCost);
+        }
+      }
+    }
+  }
+  else if (entry.message && (entry.message.includes(' casts ') || entry.message.includes(' uses '))) {
+    const abilityPattern = /(?:casts|uses) ([A-Za-z ]+)(?: on| but|$)/;
+    const abilityMatch = entry.message.match(abilityPattern);
+    if (abilityMatch && abilityMatch[1]) {
+      const abilityName = abilityMatch[1].trim();
+      if (abilityName !== 'Basic Attack' && abilityName !== 'Basic Magic Attack') {
+        const ability = window.GameState.abilities.find(a => a.name === abilityName);
+        if (ability && ability.manaCost) {
+          if (entry.sourceId === battleState.character.id) {
+            this._updateCharacterMana(battleState, -ability.manaCost);
+          } else if (entry.sourceId === battleState.opponent.id) {
+            this._updateOpponentMana(battleState, -ability.manaCost);
+          }
+        }
+      }
+    }
+  }
+  if (entry.actionType === 'defeat') {
+    if (entry.targetId === battleState.character.id) {
+      battleState.characterHealth = 0;
+      battleState.characterCurrentHealth = 0;
+      this._updateHealthDisplay(
+        this.elements.battleCharacterHealth, 
+        0, 
+        0, 
+        battleState.characterMaxHealth
+      );
+    } else if (entry.targetId === battleState.opponent.id) {
+      battleState.opponentHealth = 0;
+      battleState.opponentCurrentHealth = 0;
+      this._updateHealthDisplay(
+        this.elements.battleOpponentHealth, 
+        0, 
+        0, 
+        battleState.opponentMaxHealth
+      );
+    }
+  }
+  this._processEffects(entry, battleState.character, battleState.opponent, battleState);
+}
+/**
+ * Process direct damage from battle log
+ * Updated to calculate actual health values
+ */
+_processDirectDamage(message, character, opponent, battleState) {
+  if (message.includes(`${character.name} `) && message.includes(` ${opponent.name} for `)) {
+    const damageMatch = message.match(/for (\d+) (physical|magic) damage/);
+    if (damageMatch) {
+      const damage = parseInt(damageMatch[1]);
+      const maxHealth = opponent.stats ? opponent.stats.health : 100;
+      const damagePercent = (damage / maxHealth) * 100;
+      battleState.opponentHealth = Math.max(0, battleState.opponentHealth - damagePercent);
+      battleState.opponentCurrentHealth = Math.max(0, battleState.opponentCurrentHealth - damage);
+      this._updateHealthDisplay(
+        this.elements.battleOpponentHealth, 
+        battleState.opponentHealth, 
+        battleState.opponentCurrentHealth, 
+        battleState.opponentMaxHealth
+      );
+    }
+  }
+  if (message.includes(`${opponent.name} `) && message.includes(` ${character.name} for `)) {
+    const damageMatch = message.match(/for (\d+) (physical|magic) damage/);
+    if (damageMatch) {
+      const damage = parseInt(damageMatch[1]);
+      const maxHealth = character.stats ? character.stats.health : 100;
+      const damagePercent = (damage / maxHealth) * 100;
+      battleState.characterHealth = Math.max(0, battleState.characterHealth - damagePercent);
+      battleState.characterCurrentHealth = Math.max(0, battleState.characterCurrentHealth - damage);
+      this._updateHealthDisplay(
+        this.elements.battleCharacterHealth, 
+        battleState.characterHealth, 
+        battleState.characterCurrentHealth, 
+        battleState.characterMaxHealth
+      );
+    }
+  }
+  if (message.includes(`${character.name} has been defeated`)) {
+    battleState.characterHealth = 0;
+    battleState.characterCurrentHealth = 0;
+    this._updateHealthDisplay(
+      this.elements.battleCharacterHealth, 
+      0, 
+      0, 
+      battleState.characterMaxHealth
     );
-    battleTime = nextTime;
-    if (battleTime === char1NextAttack) {
-      processAttack(battleState, battleState.character1, battleState.character2, battleTime);
-      char1NextAttack += getEffectiveAttackSpeed(battleState.character1);
-    }
-    if (battleTime === char2NextAttack) {
-      processAttack(battleState, battleState.character2, battleState.character1, battleTime);
-      char2NextAttack += getEffectiveAttackSpeed(battleState.character2);
-    }
-    if (battleTime >= lastEffectProcessTime + timeStep) {
-      processEffects(battleState, battleTime);
-      lastEffectProcessTime = battleTime;
-    }
-    if (battleState.character1.currentHealth <= 0 || battleState.character2.currentHealth <= 0) {
-      break;
-    }
-    battleState.rounds++;
   }
-  determineWinner(battleState, battleTime);
-  dumpCharacterState(battleState.character1, "Battle end");
-  dumpCharacterState(battleState.character2, "Battle end");
-  
-  // Add debug logs to the battle result
-  const battleResult = formatBattleResult(battleState, isMatchmade);
-  battleResult.debugLogs = global.currentBattleDebugLogs || [];
-  
-  // Clear global variable
-  global.currentBattleDebugLogs = null;
-  
-  return battleResult;
-}
-/**
- * Determine the winner of a battle
- * @param {Object} battleState - Battle state
- * @param {number} battleTime - Current battle time
- */
-function determineWinner(battleState, battleTime) {
-  if (battleState.character1.currentHealth <= 0) {
-    battleState.winner = battleState.character2.id;
-    battleState.log.push(createLogEntry(battleTime, 
-      `${battleState.character2.name} wins the battle!`,
-      { 
-        sourceId: battleState.character2.id,
-        isSystem: true,
-        actionType: 'battle-end',
-        targetId: battleState.character2.id
-      }));
-    logFinalState(battleState, battleTime);
-  } 
-  else if (battleState.character2.currentHealth <= 0) {
-    battleState.winner = battleState.character1.id;
-    battleState.log.push(createLogEntry(battleTime, 
-      `${battleState.character1.name} wins the battle!`,
-      { 
-        sourceId: battleState.character1.id,
-        isSystem: true,
-        actionType: 'battle-end',
-        targetId: battleState.character1.id
-      }));
-    logFinalState(battleState, battleTime);
-  } 
-  else {
-    const char1HealthPercent = battleState.character1.currentHealth / battleState.character1.stats.health * 100;
-    const char2HealthPercent = battleState.character2.currentHealth / battleState.character2.stats.health * 100;
-    if (char1HealthPercent > char2HealthPercent) {
-      battleState.winner = battleState.character1.id;
-      battleState.log.push(createLogEntry(battleTime, 
-        `Time limit reached! ${battleState.character1.name} wins with more health remaining!`,
-        { 
-          sourceId: battleState.character1.id,
-          isSystem: true,
-          actionType: 'battle-end-timeout',
-          targetId: battleState.character1.id
-        }));
-    } else if (char2HealthPercent > char1HealthPercent) {
-      battleState.winner = battleState.character2.id;
-      battleState.log.push(createLogEntry(battleTime, 
-        `Time limit reached! ${battleState.character2.name} wins with more health remaining!`,
-        { 
-          sourceId: battleState.character2.id,
-          isSystem: true,
-          actionType: 'battle-end-timeout',
-          targetId: battleState.character2.id
-        }));
-    } else {
-      battleState.winner = null;
-      battleState.log.push(createLogEntry(battleTime, 
-        'Time limit reached! Battle ended in a draw (equal health remaining)',
-        { 
-          isSystem: true,
-          actionType: 'battle-end-draw'
-        }));
-    }
-    logFinalState(battleState, battleTime);
+  if (message.includes(`${opponent.name} has been defeated`)) {
+    battleState.opponentHealth = 0;
+    battleState.opponentCurrentHealth = 0;
+    this._updateHealthDisplay(
+      this.elements.battleOpponentHealth, 
+      0, 
+      0, 
+      battleState.opponentMaxHealth
+    );
   }
 }
 /**
- * Log the final state of the battle
- * @param {Object} battleState - Battle state
- * @param {number} battleTime - Current battle time
+ * Process DoT damage from battle log
+ * Updated to calculate actual health values
  */
-function logFinalState(battleState, battleTime) {
-  const { character1, character2 } = battleState;
-  const char1HealthPercent = character1.currentHealth > 0 
-    ? (character1.currentHealth / character1.stats.health * 100).toFixed(1) 
-    : 0;
-  battleState.log.push(createLogEntry(battleTime + 0.1, 
-    `Final state - ${character1.name}: ${Math.floor(character1.currentHealth)} health` + 
-    (character1.currentHealth > 0 ? ` (${char1HealthPercent}%)` : '') + 
-    `, ${Math.floor(character1.currentMana)} mana`,
-    { 
-      sourceId: character1.id,
-      targetId: character1.id,
-      isSystem: true,
-      actionType: 'final-state',
-      currentHealth: Math.floor(character1.currentHealth),
-      currentMana: Math.floor(character1.currentMana),
-      healthPercent: parseFloat(char1HealthPercent)
-    }));
-  const char2HealthPercent = character2.currentHealth > 0 
-    ? (character2.currentHealth / character2.stats.health * 100).toFixed(1) 
-    : 0;
-  battleState.log.push(createLogEntry(battleTime + 0.2, 
-    `Final state - ${character2.name}: ${Math.floor(character2.currentHealth)} health` + 
-    (character2.currentHealth > 0 ? ` (${char2HealthPercent}%)` : '') + 
-    `, ${Math.floor(character2.currentMana)} mana`,
-    { 
-      sourceId: character2.id,
-      targetId: character2.id,
-      isSystem: true,
-      actionType: 'final-state',
-      currentHealth: Math.floor(character2.currentHealth),
-      currentMana: Math.floor(character2.currentMana),
-      healthPercent: parseFloat(char2HealthPercent)
-    }));
+_processDotDamage(message, character, opponent, battleState) {
+  if (message.includes("takes") && message.includes("damage from")) {
+    const damageMatch = message.match(/takes (\d+) damage/);
+    if (!damageMatch) return;
+    const damage = parseInt(damageMatch[1]);
+    if (message.includes(character.name)) {
+      const maxHealth = character.stats ? character.stats.health : 100;
+      const damagePercent = (damage / maxHealth) * 100;
+      battleState.characterHealth = Math.max(0, battleState.characterHealth - damagePercent);
+      battleState.characterCurrentHealth = Math.max(0, battleState.characterCurrentHealth - damage);
+      this._updateHealthDisplay(
+        this.elements.battleCharacterHealth, 
+        battleState.characterHealth, 
+        battleState.characterCurrentHealth, 
+        battleState.characterMaxHealth
+      );
+    } else if (message.includes(opponent.name)) {
+      const maxHealth = opponent.stats ? opponent.stats.health : 100;
+      const damagePercent = (damage / maxHealth) * 100;
+      battleState.opponentHealth = Math.max(0, battleState.opponentHealth - damagePercent);
+      battleState.opponentCurrentHealth = Math.max(0, battleState.opponentCurrentHealth - damage);
+      this._updateHealthDisplay(
+        this.elements.battleOpponentHealth, 
+        battleState.opponentHealth, 
+        battleState.opponentCurrentHealth, 
+        battleState.opponentMaxHealth
+      );
+    }
+  }
 }
 /**
- * Process a character's attack
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
+ * Process healing from battle log
+ * Updated to calculate actual health values
  */
-function processAttack(battleState, attacker, defender, time) {
-  const isStunned = attacker.buffs && attacker.buffs.some(buff => buff.type === 'stun');
-  if (isStunned) {
-    battleState.log.push(createLogEntry(time, 
-      `${attacker.name} is stunned and skips their turn`,
-      { 
-        targetId: attacker.id,
-        isSystem: true,
-        actionType: 'stun-skip',
-        effectType: 'stun'
-      }));
-    attacker.buffs = attacker.buffs.filter(buff => buff.type !== 'stun');
-    if (attacker.rotation && attacker.rotation.length > 0) {
-      attacker.nextAbilityIndex = (attacker.nextAbilityIndex + 1) % attacker.rotation.length;
+_processHealing(message, character, opponent, battleState) {
+  if (message.includes("is healed for") && message.includes("health")) {
+    const healMatch = message.match(/healed for (\d+) health/);
+    if (!healMatch) return;
+    const healAmount = parseInt(healMatch[1]);
+    if (message.includes(character.name)) {
+      const maxHealth = character.stats ? character.stats.health : 100;
+      const healPercent = (healAmount / maxHealth) * 100;
+      battleState.characterHealth = Math.min(100, battleState.characterHealth + healPercent);
+      battleState.characterCurrentHealth = Math.min(battleState.characterMaxHealth, battleState.characterCurrentHealth + healAmount);
+      this._updateHealthDisplay(
+        this.elements.battleCharacterHealth, 
+        battleState.characterHealth, 
+        battleState.characterCurrentHealth, 
+        battleState.characterMaxHealth
+      );
+    } else if (message.includes(opponent.name)) {
+      const maxHealth = opponent.stats ? opponent.stats.health : 100;
+      const healPercent = (healAmount / maxHealth) * 100;
+      battleState.opponentHealth = Math.min(100, battleState.opponentHealth + healPercent);
+      battleState.opponentCurrentHealth = Math.min(battleState.opponentMaxHealth, battleState.opponentCurrentHealth + healAmount);
+      this._updateHealthDisplay(
+        this.elements.battleOpponentHealth, 
+        battleState.opponentHealth, 
+        battleState.opponentCurrentHealth, 
+        battleState.opponentMaxHealth
+      );
     }
-    return;
   }
-  if (attacker.rotation && attacker.rotation.length > 0) {
-    const nextAbilityId = attacker.rotation[attacker.nextAbilityIndex];
-    const cooldownEnd = attacker.cooldowns[nextAbilityId] || 0;
-    if (time >= cooldownEnd) {
-      const ability = getAbility(nextAbilityId);
-      if (ability) {
-        dumpCharacterState(attacker, `Before ability check`);
+}
+/**
+ * Process mana usage from battle log
+ * Updated to calculate actual mana values
+ */
+_processManaUsage(message, character, opponent, battleState) {
+  const abilityMatch = message.match(/(?:casts|uses) ([A-Za-z ]+)/);
+  if (!abilityMatch) return;
+  const abilityName = abilityMatch[1].trim();
+  if (abilityName === "Basic Magic Attack" || abilityName === "Basic Attack") return;
+  const ability = window.GameState.abilities.find(a => a.name === abilityName);
+  if (!ability || !ability.manaCost) return;
+  const manaCost = ability.manaCost;
+  if (message.indexOf(character.name) === 0) {
+    const maxMana = character.stats ? character.stats.mana : 100;
+    const manaPercent = (manaCost / maxMana) * 100;
+    battleState.characterMana = Math.max(0, battleState.characterMana - manaPercent);
+    battleState.characterCurrentMana = Math.max(0, battleState.characterCurrentMana - manaCost);
+    this._updateManaDisplay(
+      this.elements.battleCharacterMana, 
+      battleState.characterMana, 
+      battleState.characterCurrentMana, 
+      battleState.characterMaxMana
+    );
+  } else if (message.indexOf(opponent.name) === 0) {
+    const maxMana = opponent.stats ? opponent.stats.mana : 100;
+    const manaPercent = (manaCost / maxMana) * 100;
+    battleState.opponentMana = Math.max(0, battleState.opponentMana - manaPercent);
+    battleState.opponentCurrentMana = Math.max(0, battleState.opponentCurrentMana - manaCost);
+    this._updateManaDisplay(
+      this.elements.battleOpponentMana, 
+      battleState.opponentMana, 
+      battleState.opponentCurrentMana, 
+      battleState.opponentMaxMana
+    );
+  }
+}
+/**
+ * Process mana drain/gain from battle log
+ * Updated to calculate actual mana values
+ */
+_processManaChanges(message, character, opponent, battleState) {
+  if (message.includes("loses") && message.includes("mana from")) {
+    const manaMatch = message.match(/loses (\d+) mana/);
+    if (!manaMatch) return;
+    const manaLost = parseInt(manaMatch[1]);
+    if (message.includes(character.name)) {
+      const maxMana = character.stats ? character.stats.mana : 100;
+      const manaPercent = (manaLost / maxMana) * 100;
+      battleState.characterMana = Math.max(0, battleState.characterMana - manaPercent);
+      battleState.characterCurrentMana = Math.max(0, battleState.characterCurrentMana - manaLost);
+      this._updateManaDisplay(
+        this.elements.battleCharacterMana, 
+        battleState.characterMana, 
+        battleState.characterCurrentMana, 
+        battleState.characterMaxMana
+      );
+    } else if (message.includes(opponent.name)) {
+      const maxMana = opponent.stats ? opponent.stats.mana : 100;
+      const manaPercent = (manaLost / maxMana) * 100;
+      battleState.opponentMana = Math.max(0, battleState.opponentMana - manaPercent);
+      battleState.opponentCurrentMana = Math.max(0, battleState.opponentCurrentMana - manaLost);
+      this._updateManaDisplay(
+        this.elements.battleOpponentMana, 
+        battleState.opponentMana, 
+        battleState.opponentCurrentMana, 
+        battleState.opponentMaxMana
+      );
+    }
+  }
+  if (message.includes("gains") && message.includes("mana from")) {
+    const manaMatch = message.match(/gains (\d+) mana/);
+    if (!manaMatch) return;
+    const manaGained = parseInt(manaMatch[1]);
+    if (message.includes(character.name)) {
+      const maxMana = character.stats ? character.stats.mana : 100;
+      const manaPercent = (manaGained / maxMana) * 100;
+      battleState.characterMana = Math.min(100, battleState.characterMana + manaPercent);
+      battleState.characterCurrentMana = Math.min(battleState.characterMaxMana, battleState.characterCurrentMana + manaGained);
+      this._updateManaDisplay(
+        this.elements.battleCharacterMana, 
+        battleState.characterMana, 
+        battleState.characterCurrentMana, 
+        battleState.characterMaxMana
+      );
+    } else if (message.includes(opponent.name)) {
+      const maxMana = opponent.stats ? opponent.stats.mana : 100;
+      const manaPercent = (manaGained / maxMana) * 100;
+      battleState.opponentMana = Math.min(100, battleState.opponentMana + manaPercent);
+      battleState.opponentCurrentMana = Math.min(battleState.opponentMaxMana, battleState.opponentCurrentMana + manaGained);
+      this._updateManaDisplay(
+        this.elements.battleOpponentMana, 
+        battleState.opponentMana, 
+        battleState.opponentCurrentMana, 
+        battleState.opponentMaxMana
+      );
+    }
+  }
+}
+/**
+ * Process final state entries properly
+ * @param {Object} entry - Log entry
+ * @param {Object} battleState - Battle state
+ */
+_processFinalState(entry, battleState) {
+  if (entry.actionType !== 'final-state') return;
+  console.log('Processing final state entry:', entry);
+  if (entry.targetId === battleState.character.id) {
+    let currentHealth = entry.currentHealth;
+    let currentMana = entry.currentMana;
+    if (currentHealth === undefined || currentMana === undefined) {
+      const healthMatch = entry.message.match(/(\-?\d+) health/);
+      const manaMatch = entry.message.match(/(\-?\d+) mana/);
+      if (healthMatch) {
+        currentHealth = parseInt(healthMatch[1]);
       }
-      if (ability && hasEnoughMana(attacker, ability)) {
-        const previousMana = attacker.currentMana;
-        if (ability.manaCost) {
-          attacker.currentMana -= ability.manaCost;
+      if (manaMatch) {
+        currentMana = parseInt(manaMatch[1]);
+      }
+    }
+    currentHealth = Math.max(0, currentHealth || 0);
+    currentMana = Math.max(0, currentMana || 0);
+    let healthPercent = entry.healthPercent;
+    if (healthPercent === undefined && currentHealth !== undefined) {
+      healthPercent = (currentHealth / battleState.characterMaxHealth) * 100;
+    }
+    healthPercent = Math.max(0, Math.min(100, healthPercent || 0));
+    battleState.characterHealth = healthPercent;
+    battleState.characterCurrentHealth = currentHealth;
+    battleState.characterCurrentMana = currentMana;
+    this._updateHealthDisplay(
+      this.elements.battleCharacterHealth, 
+      healthPercent, 
+      currentHealth, 
+      battleState.characterMaxHealth
+    );
+    this._updateManaDisplay(
+      this.elements.battleCharacterMana, 
+      (currentMana / battleState.characterMaxMana) * 100, 
+      currentMana, 
+      battleState.characterMaxMana
+    );
+  } 
+  else if (entry.targetId === battleState.opponent.id) {
+    let currentHealth = entry.currentHealth;
+    let currentMana = entry.currentMana;
+    if (currentHealth === undefined || currentMana === undefined) {
+      const healthMatch = entry.message.match(/(\-?\d+) health/);
+      const manaMatch = entry.message.match(/(\-?\d+) mana/);
+      if (healthMatch) {
+        currentHealth = parseInt(healthMatch[1]);
+      }
+      if (manaMatch) {
+        currentMana = parseInt(manaMatch[1]);
+      }
+    }
+    currentHealth = Math.max(0, currentHealth || 0);
+    currentMana = Math.max(0, currentMana || 0);
+    let healthPercent = entry.healthPercent;
+    if (healthPercent === undefined && currentHealth !== undefined) {
+      healthPercent = (currentHealth / battleState.opponentMaxHealth) * 100;
+    }
+    healthPercent = Math.max(0, Math.min(100, healthPercent || 0));
+    battleState.opponentHealth = healthPercent;
+    battleState.opponentCurrentHealth = currentHealth;
+    battleState.opponentCurrentMana = currentMana;
+    this._updateHealthDisplay(
+      this.elements.battleOpponentHealth, 
+      healthPercent, 
+      currentHealth, 
+      battleState.opponentMaxHealth
+    );
+    this._updateManaDisplay(
+      this.elements.battleOpponentMana, 
+      (currentMana / battleState.opponentMaxMana) * 100, 
+      currentMana, 
+      battleState.opponentMaxMana
+    );
+  }
+}
+/**
+ * Process effects from battle log
+ * @param {Object} entry - Log entry with structured data
+ * @param {Object} character - Character object
+ * @param {Object} opponent - Opponent object
+ * @param {Object} battleState - Current battle state
+ */
+_processEffects(entry, character, opponent, battleState) {
+  console.log('Processing effect entry:', entry);
+  if (entry.actionType === 'apply-effect' || entry.actionType === 'apply-buff' || 
+      entry.actionType === 'buff' || entry.actionType === 'refresh-effect' || 
+      entry.actionType === 'refresh-buff') {
+    let target = null;
+    if (entry.targetId === character.id) {
+      target = 'character';
+    } else if (entry.targetId === opponent.id) {
+      target = 'opponent';
+    } else {
+      console.log('No valid target ID found for effect:', entry);
+      return;
+    }
+    const effectType = entry.effectType;
+    const effectName = entry.effectName || entry.abilityId || effectType;
+    if (effectType) {
+      console.log(`Creating effect object for ${effectType}, ${effectName}`);
+      const effectObj = {
+        type: effectType,
+        name: effectName,
+        iconClass: this._getEffectIconClass(effectType),
+        description: this._getEffectDescription(effectType, entry.effectAmount),
+        amount: entry.effectAmount,
+        duration: entry.effectDuration,
+        damage: entry.damage,
+        temporary: this._isTemporaryEffect(effectType)
+      };
+      console.log('Created effect object:', effectObj);
+      if (target === 'character') {
+        if (!battleState.characterEffects.some(e => e.type === effectObj.type)) {
+          battleState.characterEffects.push(effectObj);
+          this._updateEffectDisplay(this.elements.battleCharacterEffects, battleState.characterEffects);
+          console.log('Added effect to character:', effectObj.name);
+          if (effectObj.temporary) {
+            setTimeout(() => {
+              battleState.characterEffects = battleState.characterEffects.filter(e => e.type !== effectObj.type);
+              this._updateEffectDisplay(this.elements.battleCharacterEffects, battleState.characterEffects);
+              console.log('Removed temporary effect from character:', effectObj.name);
+            }, effectObj.duration || 2000);
+          }
         }
-        attacker.cooldowns[ability.id] = time + ability.cooldown;
-        processAbility(battleState, attacker, defender, time, ability);
-        const oldIndex = attacker.nextAbilityIndex;
-        attacker.nextAbilityIndex = (attacker.nextAbilityIndex + 1) % attacker.rotation.length;
-        return;
-      } else {
-        if (!ability) {
+      } else if (target === 'opponent') {
+        if (!battleState.opponentEffects.some(e => e.type === effectObj.type)) {
+          battleState.opponentEffects.push(effectObj);
+          this._updateEffectDisplay(this.elements.battleOpponentEffects, battleState.opponentEffects);
+          console.log('Added effect to opponent:', effectObj.name);
+          if (effectObj.temporary) {
+            setTimeout(() => {
+              battleState.opponentEffects = battleState.opponentEffects.filter(e => e.type !== effectObj.type);
+              this._updateEffectDisplay(this.elements.battleOpponentEffects, battleState.opponentEffects);
+              console.log('Removed temporary effect from opponent:', effectObj.name);
+            }, effectObj.duration || 2000);
+          }
+        }
+      }
+    }
+  }
+  if (entry.actionType === 'stun-skip') {
+    let target = null;
+    if (entry.targetId === character.id) {
+      target = 'character';
+    } else if (entry.targetId === opponent.id) {
+      target = 'opponent';
+    } else {
+      return;
+    }
+    const stunEffectObj = {
+      type: 'stun',
+      name: 'Stunned',
+      iconClass: 'stun-icon',
+      description: 'Stunned: Skip next attack',
+      temporary: true,
+      duration: 3000  
+    };
+    if (target === 'character') {
+      battleState.characterEffects = battleState.characterEffects.filter(e => e.type !== 'stun');
+      battleState.characterEffects.push(stunEffectObj);
+      this._updateEffectDisplay(this.elements.battleCharacterEffects, battleState.characterEffects);
+      setTimeout(() => {
+        battleState.characterEffects = battleState.characterEffects.filter(e => e.type !== 'stun');
+        this._updateEffectDisplay(this.elements.battleCharacterEffects, battleState.characterEffects);
+      }, stunEffectObj.duration);
+    } else if (target === 'opponent') {
+      battleState.opponentEffects = battleState.opponentEffects.filter(e => e.type !== 'stun');
+      battleState.opponentEffects.push(stunEffectObj);
+      this._updateEffectDisplay(this.elements.battleOpponentEffects, battleState.opponentEffects);
+      setTimeout(() => {
+        battleState.opponentEffects = battleState.opponentEffects.filter(e => e.type !== 'stun');
+        this._updateEffectDisplay(this.elements.battleOpponentEffects, battleState.opponentEffects);
+      }, stunEffectObj.duration);
+    }
+  }
+  if (entry.actionType === 'effect-expiry' || entry.actionType === 'buff-expiry') {
+    let target = null;
+    if (entry.targetId === character.id) {
+      target = 'character';
+    } else if (entry.targetId === opponent.id) {
+      target = 'opponent';
+    } else {
+      return;
+    }
+    const effectName = entry.effectName;
+    const effectType = entry.effectType;
+    if (effectName) {
+      console.log(`Processing effect expiry for ${effectName} on ${target}`);
+      if (target === 'character') {
+        if (effectType) {
+          battleState.characterEffects = battleState.characterEffects.filter(e => e.type !== effectType);
         } else {
+          battleState.characterEffects = battleState.characterEffects.filter(e => e.name !== effectName);
         }
+        this._updateEffectDisplay(this.elements.battleCharacterEffects, battleState.characterEffects);
+      } else if (target === 'opponent') {
+        if (effectType) {
+          battleState.opponentEffects = battleState.opponentEffects.filter(e => e.type !== effectType);
+        } else {
+          battleState.opponentEffects = battleState.opponentEffects.filter(e => e.name !== effectName);
+        }
+        this._updateEffectDisplay(this.elements.battleOpponentEffects, battleState.opponentEffects);
       }
+    }
+  }
+  if (entry.actionType === 'heal' || entry.actionType === 'regeneration') {
+    const targetId = entry.targetId;
+    let target = null;
+    if (targetId === character.id) {
+      target = 'character';
+    } else if (targetId === opponent.id) {
+      target = 'opponent';
     } else {
+      return;
     }
-  } else {
-  }
-  performBasicAttack(battleState, attacker, defender, time);
-}
-
-/**
- * Log character state for debugging
- * @param {Object} character - Character to log
- * @param {string} label - Label for the log
- */
-function dumpCharacterState(character, label) {
-  // Create a structured log object
-  const stateLog = {
-    label: label,
-    name: character.name,
-    health: `${character.currentHealth}/${character.stats.health}`,
-    mana: `${character.currentMana}/${character.stats.mana}`,
-    buffs: character.buffs,
-    effects: character.periodicEffects,
-    cooldowns: character.cooldowns,
-    timestamp: new Date().toISOString()
-  };
-
-  // If we're in a battle context that will be returned to client
-  if (global.currentBattleDebugLogs) {
-    if (!Array.isArray(global.currentBattleDebugLogs)) {
-      global.currentBattleDebugLogs = [];
-    }
-    global.currentBattleDebugLogs.push(stateLog);
-  }
-
-  // Still log to server console for debugging
-  console.log(`[STATE DUMP] ${label} - ${character.name}:`);
-  console.log(`  Health: ${character.currentHealth}/${character.stats.health}`);
-  console.log(`  Mana: ${character.currentMana}/${character.stats.mana}`);
-  console.log(`  Buffs: ${JSON.stringify(character.buffs)}`);
-  console.log(`  Effects: ${JSON.stringify(character.periodicEffects)}`);
-  console.log(`  Cooldowns: ${JSON.stringify(character.cooldowns)}`);
-}
-/**
- * Process an ability
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
- * @param {Object} ability - Ability being used
- */
-function processAbility(battleState, attacker, defender, time, ability) {
-  const abilityMessage = `${attacker.name} ${ability.type === 'magic' ? 'casts' : 'uses'} ${ability.name}`;
-  const baseMetadata = {
-    sourceId: attacker.id,
-    targetId: defender.id,
-    abilityId: ability.id,
-    abilityName: ability.name,
-    manaCost: ability.manaCost || 0
-  };
-  if (ability.buffEffect) {
-    processBuffAbility(battleState, attacker, defender, time, ability, abilityMessage, baseMetadata);
-  } 
-  else if (ability.healEffect) {
-    processHealAbility(battleState, attacker, time, ability, abilityMessage, baseMetadata);
-  }
-  else if (ability.dotEffect) {
-    processDotAbility(battleState, attacker, defender, time, ability, abilityMessage, baseMetadata);
-  }
-  else if (ability.periodicEffect) {
-    processPeriodicAbility(battleState, attacker, defender, time, ability, abilityMessage, baseMetadata);
-  }
-  else if (ability.guaranteedCrit) {
-    const result = performPhysicalAttack(battleState, attacker, defender, time, ability.name, ability.damageMultiplier || 1.2, true, baseMetadata);
-    if (result.actionResult !== 'dodge' && result.damage > 0) {
+    const healEffectObj = {
+      type: 'selfHeal',
+      name: 'Healing',
+      iconClass: 'buff-icon',
+      description: `Heals for ${entry.healAmount} health`,
+      amount: entry.healAmount,
+      temporary: true,
+      duration: 2000
+    };
+    console.log('Created healing effect:', healEffectObj);
+    if (target === 'character') {
+      battleState.characterEffects.push(healEffectObj);
+      this._updateEffectDisplay(this.elements.battleCharacterEffects, battleState.characterEffects);
+      setTimeout(() => {
+        battleState.characterEffects = battleState.characterEffects.filter(e => e.name !== healEffectObj.name);
+        this._updateEffectDisplay(this.elements.battleCharacterEffects, battleState.characterEffects);
+      }, 2000);
+    } else if (target === 'opponent') {
+      battleState.opponentEffects.push(healEffectObj);
+      this._updateEffectDisplay(this.elements.battleOpponentEffects, battleState.opponentEffects);
+      setTimeout(() => {
+        battleState.opponentEffects = battleState.opponentEffects.filter(e => e.name !== healEffectObj.name);
+        this._updateEffectDisplay(this.elements.battleOpponentEffects, battleState.opponentEffects);
+      }, 2000);
     }
   }
-  else if (ability.multiAttack) {
-    processMultiAttackAbility(battleState, attacker, defender, time, ability, abilityMessage, baseMetadata);
-  }
-  else if (ability.stunEffect) {
-    const result = ability.damage === 'physical' ? 
-      performPhysicalAttack(battleState, attacker, defender, time, ability.name, ability.damageMultiplier || 0.5, false, baseMetadata) :
-      performMagicAttack(battleState, attacker, defender, time, ability.name, ability.damageMultiplier || 0.5, baseMetadata);
-    if (result.actionResult !== 'dodge' && result.damage > 0 && defender.currentHealth > 0) {
-      applyStunEffect(battleState, attacker, defender, time, ability.name, baseMetadata);
-    }
-  }
-  else {
-    processDamageAbility(battleState, attacker, defender, time, ability, abilityMessage, baseMetadata);
-  }
-}
-/**
- * Process a physical attack with enhanced metadata
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
- * @param {string} attackName - Name of the attack
- * @param {number} multiplier - Damage multiplier
- * @param {boolean} guaranteedCrit - Whether critical is guaranteed
- * @param {Object} metadata - Additional metadata
- * @returns {Object} Attack result
- */
-function performPhysicalAttack(battleState, attacker, defender, time, attackName, multiplier = 1, guaranteedCrit = false, metadata = {}) {
-  const result = calculatePhysicalAttack(attacker, defender, attackName, multiplier, guaranteedCrit);
-  defender.currentHealth -= result.damage;
-  const logMetadata = {
-    sourceId: attacker.id,
-    targetId: defender.id,
-    actionType: 'physical-attack',
-    abilityId: metadata.abilityId || attackName,
-    abilityName: metadata.abilityName || attackName,
-    damage: result.damage,
-    damageType: 'physical',
-    isCritical: result.isCritical,
-    manaCost: metadata.manaCost || 0
-  };
-  if (result.actionResult === 'dodge') {
-    battleState.log.push(createLogEntry(time,
-      `${attacker.name} uses ${attackName} but ${defender.name} dodges the attack!`,
-      {
-        ...logMetadata,
-        actionType: 'dodge',
-        damage: 0
-      }));
-  } 
-  else if (result.actionResult === 'blocked') {
-    battleState.log.push(createLogEntry(time,
-      `${attacker.name} uses ${attackName}${result.isCritical ? ' (CRITICAL)' : ''} on ${defender.name} but it was partially blocked! ${result.damage} physical damage.`,
-      {
-        ...logMetadata,
-        actionType: 'block'
-      }));
-  } 
-  else {
-    battleState.log.push(createLogEntry(time,
-      `${attacker.name} uses ${attackName}${result.isCritical ? ' (CRITICAL)' : ''} on ${defender.name} for ${result.damage} physical damage`,
-      logMetadata));
-  }
-  if (defender.currentHealth <= 0) {
-    battleState.log.push(createLogEntry(time,
-      `${defender.name} has been defeated!`,
-      {
-        targetId: defender.id,
-        isSystem: true,
-        actionType: 'defeat'
-      }));
-  }
-  if (attackName === 'Basic Attack' && defender.currentHealth > 0) {
-    processWeaponEffect(battleState, attacker, defender, time, result);
-  }
-  return result;
-}
-/**
- * Process a multi-attack ability
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
- * @param {Object} ability - Ability being used
- * @param {string} abilityMessage - Base message for the ability usage
- */
-function processMultiAttackAbility(battleState, attacker, defender, time, ability, abilityMessage) {
-  battleState.log.push(createLogEntry(time, abilityMessage, 
-    {
-      sourceId: attacker.id,
-      targetId: defender.id,
-      actionType: 'multi-attack',
-      abilityId: ability.id,
-      damageType: ability.damage
-    }));
-  const attackCount = ability.multiAttack.count || 2;
-  const attackDelay = ability.multiAttack.delay || 0.5;
-  if (ability.damage === 'physical') {
-    performPhysicalAttack(battleState, attacker, defender, time + 0.1, 
-      `${ability.name} (Hit 1)`, ability.damageMultiplier || 1);
-  } else if (ability.damage === 'magic') {
-    performMagicAttack(battleState, attacker, defender, time + 0.1, 
-      `${ability.name} (Hit 1)`, ability.damageMultiplier || 1);
-  } else {
-    performPhysicalAttack(battleState, attacker, defender, time + 0.1, 
-      `${ability.name} (Hit 1)`, ability.damageMultiplier || 1);
-  }
-  for (let i = 1; i < attackCount; i++) {
-    if (defender.currentHealth <= 0) break;
-    const hitTime = time + 0.1 + (i * attackDelay);
-    if (ability.damage === 'physical') {
-      performPhysicalAttack(battleState, attacker, defender, hitTime, 
-        `${ability.name} (Hit ${i+1})`, ability.damageMultiplier || 1);
-    } else if (ability.damage === 'magic') {
-      performMagicAttack(battleState, attacker, defender, hitTime, 
-        `${ability.name} (Hit ${i+1})`, ability.damageMultiplier || 1);
+  if (entry.actionType === 'periodic-damage') {
+    const targetId = entry.targetId;
+    let target = null;
+    if (targetId === character.id) {
+      target = 'character';
+    } else if (targetId === opponent.id) {
+      target = 'opponent';
     } else {
-      performPhysicalAttack(battleState, attacker, defender, hitTime, 
-        `${ability.name} (Hit ${i+1})`, ability.damageMultiplier || 1);
+      return;
     }
-  }
-}
-/**
- * Apply a stun effect to a character
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacker
- * @param {Object} defender - Character being stunned
- * @param {number} time - Current battle time
- * @param {string} sourceName - Name of ability that caused the stun
- */
-function applyStunEffect(battleState, attacker, defender, time, sourceName) {
-  if (!defender.buffs) {
-    defender.buffs = [];
-  }
-  const stunEffect = {
-    name: 'Stunned',
-    type: 'stun',
-    source: sourceName
-  };
-  defender.buffs.push(stunEffect);
-  battleState.log.push(createLogEntry(time + 0.1,
-    `${defender.name} is stunned by ${attacker.name}'s ${sourceName}`,
-    {
-      sourceId: attacker.id,
-      targetId: defender.id,
-      isSystem: true,
-      actionType: 'apply-effect',
-      effectType: 'stun',
-      effectName: 'Stunned',
-      abilityId: sourceName
-    }));
-}
-/**
- * Process a buff ability
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
- * @param {Object} ability - Ability being used
- * @param {string} abilityMessage - Base message for the ability usage
- */
-function processBuffAbility(battleState, attacker, defender, time, ability, abilityMessage) {
-  let buffAmount = ability.buffEffect.amount || 0;
-  if (ability.buffEffect.magicDamageScaling) {
-    const avgMagicDmg = (attacker.stats.minMagicDamage + attacker.stats.maxMagicDamage) / 2;
-    const scalingRate = ability.buffEffect.scalingRate || 0.2;
-    const baseAmount = ability.buffEffect.baseAmount || 15;
-    const maxAmount = ability.buffEffect.maxAmount || 35;
-    buffAmount = Math.min(maxAmount, baseAmount + Math.round(avgMagicDmg * scalingRate));
-  }
-  const buffTarget = ability.buffEffect.targetsSelf === false ? defender : attacker;
-  const buffTargetId = buffTarget.id;
-  const buff = {
-    name: ability.name,
-    type: ability.buffEffect.type,
-    amount: buffAmount,
-    duration: ability.buffEffect.duration,
-    endTime: time + ability.buffEffect.duration
-  };
-  applyBuff(battleState, buffTarget, time, buff);
-  let logData = {
-    sourceId: attacker.id,
-    targetId: buffTargetId,
-    abilityId: ability.id,
-    actionType: 'ability-cast',
-    effectType: ability.buffEffect.type,
-    effectName: ability.name,
-    effectAmount: buffAmount,
-    effectDuration: ability.buffEffect.duration
-  };
-  let message = "";
-  if (ability.buffEffect.type === 'physicalReduction') {
-    message = `${abilityMessage}, increasing physical damage reduction by ${buffAmount}% for ${ability.buffEffect.duration} seconds`;
-    battleState.log.push(createLogEntry(time, message, logData));
-  } else if (ability.buffEffect.type === 'damageIncrease') {
-    message = `${abilityMessage}, increasing damage by ${buffAmount}% for ${ability.buffEffect.duration} seconds`;
-    battleState.log.push(createLogEntry(time, message, logData));
-  } else if (ability.buffEffect.type === 'attackSpeedReduction') {
-    message = `${abilityMessage}, slowing ${defender.name}'s attack speed by ${buffAmount}% for ${ability.buffEffect.duration} seconds`;
-    battleState.log.push(createLogEntry(time, message, {
-      ...logData,
-      targetId: defender.id  
-    }));
-  } else {
-    message = `${abilityMessage}, applying ${ability.buffEffect.type} effect for ${ability.buffEffect.duration} seconds`;
-    battleState.log.push(createLogEntry(time, message, logData));
-  }
-}
-/**
- * Process a healing ability
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Character casting the heal
- * @param {number} time - Current battle time
- * @param {Object} ability - Ability being used
- * @param {string} abilityMessage - Base message for the ability usage
- */
-function processHealAbility(battleState, attacker, time, ability, abilityMessage) {
-  battleState.log.push(createLogEntry(time, abilityMessage, 
-    {
-      sourceId: attacker.id,
-      targetId: attacker.id,
-      actionType: 'cast-heal',
-      abilityId: ability.id,
-      effectType: 'heal'
-    }));
-  applyHeal(battleState, attacker, time, ability.healEffect);
-}
-/**
- * Process a damage over time ability
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
- * @param {Object} ability - Ability being used
- * @param {string} abilityMessage - Base message for the ability usage
- */
-function processDotAbility(battleState, attacker, defender, time, ability, abilityMessage) {
-  battleState.log.push(createLogEntry(time, abilityMessage, {
-    sourceId: attacker.id,
-    targetId: defender.id,
-    actionType: 'cast-dot',
-    abilityId: ability.id,
-    effectType: ability.dotEffect.type
-  }));
-  if (ability.damage === 'physical') {
-    const damageMultiplier = ability.damageMultiplier || 1.1;
-    performPhysicalAttack(battleState, attacker, defender, time, ability.name, damageMultiplier);
-  } else if (ability.damage === 'magic') {
-    const damageMultiplier = ability.damageMultiplier || 1.1;
-    performMagicAttack(battleState, attacker, defender, time, ability.name, damageMultiplier);
-  }
-  const effectName = ability.dotEffect.type.charAt(0).toUpperCase() + ability.dotEffect.type.slice(1); 
-  const dotEffect = {
-    name: effectName,
-    type: ability.dotEffect.type,
-    damage: ability.dotEffect.damage,
-    duration: ability.dotEffect.duration,
-    interval: ability.dotEffect.interval || 1, 
-    lastProcTime: time, 
-    endTime: time + ability.dotEffect.duration,
-    sourceName: attacker.name,
-    sourceId: attacker.id,
-    abilityId: ability.id
-  };
-  applyPeriodicEffect(battleState, attacker, defender, time, dotEffect);
-}
-/**
- * Process effects on both characters
- * @param {Object} battleState - Battle state
- * @param {number} time - Current battle time
- */
-function processEffects(battleState, time) {
-  processCharacterEffects(battleState, battleState.character1, battleState.character2, time);
-  processCharacterEffects(battleState, battleState.character2, battleState.character1, time);
-}
-/**
- * Process a periodic effect ability (like mana drain)
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
- * @param {Object} ability - Ability being used
- * @param {string} abilityMessage - Base message for the ability usage
- */
-function processPeriodicAbility(battleState, attacker, defender, time, ability, abilityMessage) {
-  const periodicEffect = {
-    name: ability.name,
-    type: ability.periodicEffect.type,
-    amount: ability.periodicEffect.amount,
-    duration: ability.periodicEffect.duration,
-    interval: ability.periodicEffect.interval,
-    lastProcTime: time,
-    endTime: time + ability.periodicEffect.duration
-  };
-  applyPeriodicEffect(battleState, attacker, defender, time, periodicEffect);
-  if (ability.periodicEffect.type === 'manaDrain') {
-    const manaDrained = Math.min(defender.currentMana, ability.periodicEffect.amount);
-    defender.currentMana -= manaDrained;
-    attacker.currentMana = Math.min(attacker.stats.mana, attacker.currentMana + ability.periodicEffect.amount);
-    battleState.log.push(createLogEntry(time,
-      `${attacker.name} casts ${ability.name} on ${defender.name}, draining ${manaDrained} mana`,
-      {
-        sourceId: attacker.id,
-        targetId: defender.id,
-        actionType: 'mana-drain',
-        abilityId: ability.id,
-        manaChange: -manaDrained,
-        effectType: 'manaDrain',
-        effectName: ability.name
-      }));
-    if (manaDrained > 0) {
-      battleState.log.push(createLogEntry(time + 0.1,
-        `${attacker.name} gains ${ability.periodicEffect.amount} mana from ${ability.name}`,
-        {
-          sourceId: attacker.id,
-          targetId: attacker.id,
-          isSystem: true,
-          actionType: 'mana-gain',
-          manaChange: ability.periodicEffect.amount,
-          effectType: 'manaGain',
-          effectName: ability.name
-        }));
-    }
-  } else {
-    battleState.log.push(createLogEntry(time, abilityMessage, 
-      {
-        sourceId: attacker.id,
-        targetId: defender.id,
-        actionType: 'cast-periodic',
-        abilityId: ability.id,
-        effectType: ability.periodicEffect.type,
-        effectName: ability.name,
-        effectDuration: ability.periodicEffect.duration,
-        effectAmount: ability.periodicEffect.amount
-      }));
-  }
-}
-/**
- * Process a direct damage ability
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
- * @param {Object} ability - Ability being used
- * @param {string} abilityMessage - Base message for the ability usage
- */
-function processDamageAbility(battleState, attacker, defender, time, ability, abilityMessage) {
-  if (ability.damage === 'physical') {
-    const damageMultiplier = ability.damageMultiplier || 1;
-    performPhysicalAttack(battleState, attacker, defender, time, ability.name, damageMultiplier);
-  } else if (ability.damage === 'magic') {
-    const damageMultiplier = ability.damageMultiplier || 1.5;
-    const attackResult = performMagicAttack(battleState, attacker, defender, time, ability.name, damageMultiplier);
-    if (ability.selfDamagePercent && attackResult.damage > 0) {
-      const selfDamage = Math.round(attackResult.damage * (ability.selfDamagePercent / 100));
-      if (selfDamage > 0) {
-        const beforeHealth = attacker.currentHealth;
-        attacker.currentHealth -= selfDamage;
-        battleState.log.push(createLogEntry(time + 0.1,
-          `${attacker.name} takes ${selfDamage} damage from the backlash of ${ability.name}`,
-          { 
-            sourceId: attacker.id, 
-            targetId: attacker.id, 
-            isSystem: true,
-            actionType: 'self-damage',
-            damage: selfDamage,
-            abilityId: ability.id
-          }));
-        if (attacker.currentHealth <= 0) {
-          battleState.log.push(createLogEntry(time + 0.2,
-            `${attacker.name} has been defeated by their own spell!`,
-            { 
-              targetId: attacker.id, 
-              isSystem: true,
-              actionType: 'defeat'
-            }));
+    console.log('Processing periodic damage:', entry);
+    if (entry.effectType) {
+      const dotEffectObj = {
+        type: entry.effectType,
+        name: entry.effectName || (entry.effectType === 'poison' ? 'Poison' : 'Burning'),
+        iconClass: this._getEffectIconClass(entry.effectType),
+        description: `Takes ${entry.damage} damage periodically`,
+        damage: entry.damage,
+        temporary: false
+      };
+      console.log('Created DOT effect from periodic damage:', dotEffectObj);
+      if (target === 'character') {
+        if (!battleState.characterEffects.some(e => e.type === dotEffectObj.type)) {
+          battleState.characterEffects.push(dotEffectObj);
+          this._updateEffectDisplay(this.elements.battleCharacterEffects, battleState.characterEffects);
+        }
+      } else if (target === 'opponent') {
+        if (!battleState.opponentEffects.some(e => e.type === dotEffectObj.type)) {
+          battleState.opponentEffects.push(dotEffectObj);
+          this._updateEffectDisplay(this.elements.battleOpponentEffects, battleState.opponentEffects);
         }
       }
     }
-    if (ability.criticalEffect && attackResult.isCritical) {
-      if (ability.criticalEffect.type === 'burning') {
-        const avgMagicDmg = (attacker.stats.minMagicDamage + attacker.stats.maxMagicDamage) / 2;
-        const dotDamage = Math.round(avgMagicDmg * (ability.criticalEffect.damagePercent / 100));
-        applyPeriodicEffect(battleState, attacker, defender, time, {
-          name: 'Burning',
-          type: 'burning',
-          damage: dotDamage,
-          duration: ability.criticalEffect.duration,
-          interval: ability.criticalEffect.interval || 1,
-          lastProcTime: time,
-          endTime: time + ability.criticalEffect.duration
-        });
+  }
+  if (entry.actionType === 'mana-drain') {
+    const targetId = entry.targetId;
+    let target = null;
+    if (targetId === character.id) {
+      target = 'character';
+    } else if (targetId === opponent.id) {
+      target = 'opponent';
+    } else {
+      return;
+    }
+    console.log('Processing mana drain effect:', entry);
+    const manaEffectObj = {
+      type: 'manaDrain',
+      name: entry.effectName || 'Mana Drain',
+      iconClass: this._getEffectIconClass('manaDrain'),
+      description: this._getManaEffectDescription('manaDrain', Math.abs(entry.manaChange)),
+      amount: Math.abs(entry.manaChange),
+      temporary: false
+    };
+    console.log('Created mana drain effect:', manaEffectObj);
+    if (target === 'character') {
+      if (!battleState.characterEffects.some(e => e.type === 'manaDrain')) {
+        battleState.characterEffects.push(manaEffectObj);
+        this._updateEffectDisplay(this.elements.battleCharacterEffects, battleState.characterEffects);
       }
-    }
-  } else {
-    performBasicAttack(battleState, attacker, defender, time);
-  }
-}
-/**
- * Perform a magic attack
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
- * @param {string} attackName - Name of the attack
- * @param {number} multiplier - Damage multiplier
- * @returns {Object} Attack result
- */
-const abilityService = require('./ability-service');
-function performMagicAttack(battleState, attacker, defender, time, attackName, multiplier = 1, metadata = {}) {
-  const result = calculateMagicAttack(attacker, defender, attackName, multiplier);
-  defender.currentHealth -= result.damage;
-  const logMetadata = {
-    sourceId: attacker.id,
-    targetId: defender.id,
-    actionType: 'magic-attack',
-    abilityId: metadata.abilityId || attackName,
-    abilityName: metadata.abilityName || attackName,
-    damage: result.damage,
-    damageType: 'magic',
-    isCritical: result.isCritical,
-    manaCost: metadata.manaCost || 0
-  };
-  if (result.actionResult === 'dodge') {
-    battleState.log.push(createLogEntry(time,
-      `${attacker.name} casts ${attackName} but ${defender.name} evades the magical energy!`,
-      {
-        ...logMetadata,
-        actionType: 'dodge',
-        damage: 0
-      }));
-  } 
-  else {
-    battleState.log.push(createLogEntry(time,
-      `${attacker.name} casts ${attackName}${result.isCritical ? ' (CRITICAL)' : ''} on ${defender.name} for ${result.damage} magic damage`,
-      logMetadata));
-  }
-  if (defender.currentHealth <= 0) {
-    battleState.log.push(createLogEntry(time,
-      `${defender.name} has been defeated!`,
-      {
-        targetId: defender.id,
-        isSystem: true,
-        actionType: 'defeat'
-      }));
-  }
-  if (attackName === 'Basic Magic Attack' && defender.currentHealth > 0) {
-    processWeaponEffect(battleState, attacker, defender, time, result);
-  }
-  return result;
-}
-/**
- * Perform a basic attack
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
- */
-function performBasicAttack(battleState, attacker, defender, time) {
-  if (attacker.attackType === 'magic') {
-    performMagicAttack(battleState, attacker, defender, time, 'Basic Magic Attack', 1);
-  } else {
-    performPhysicalAttack(battleState, attacker, defender, time, 'Basic Attack', 1);
-  }
-}
-/**
- * Process weapon effects (like stun, poison, etc.) on basic attacks
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
- */
-function processWeaponEffect(battleState, attacker, defender, time, attackResult) {
-  if (attackResult.actionResult === 'dodge' || attackResult.damage <= 0) {
-    return;
-  }
-  if (!attacker.equipment) return;
-  const mainHand = attacker.equipment.mainHand;
-  if (mainHand && mainHand.effect && mainHand.effect.onBasicAttack) {
-    const effectChance = mainHand.effect.chance || 0;
-    if (Math.random() * 100 <= effectChance) {
-      applyWeaponEffect(battleState, attacker, defender, time, mainHand);
-      return; 
-    }
-  }
-  if (!mainHand?.twoHanded) {
-    const offHand = attacker.equipment.offHand;
-    if (offHand && offHand.effect && offHand.effect.onBasicAttack) {
-      const effectChance = offHand.effect.chance || 0;
-      if (Math.random() * 100 <= effectChance) {
-        applyWeaponEffect(battleState, attacker, defender, time, offHand);
+    } else if (target === 'opponent') {
+      if (!battleState.opponentEffects.some(e => e.type === 'manaDrain')) {
+        battleState.opponentEffects.push(manaEffectObj);
+        this._updateEffectDisplay(this.elements.battleOpponentEffects, battleState.opponentEffects);
       }
     }
   }
+  if (entry.actionType === 'mana-gain' || entry.actionType === 'mana-regen') {
+    const targetId = entry.targetId;
+    let target = null;
+    if (targetId === character.id) {
+      target = 'character';
+    } else if (targetId === opponent.id) {
+      target = 'opponent';
+    } else {
+      return;
+    }
+    const manaGainObj = {
+      type: entry.actionType === 'mana-gain' ? 'manaGain' : 'manaRegen',
+      name: entry.actionType === 'mana-gain' ? 'Mana Gain' : 'Mana Regeneration',
+      iconClass: this._getEffectIconClass(entry.actionType === 'mana-gain' ? 'manaGain' : 'manaRegen'),
+      description: `Gains ${Math.abs(entry.manaChange)} mana`,
+      amount: Math.abs(entry.manaChange),
+      temporary: true,
+      duration: 1500
+    };
+    if (target === 'character') {
+      battleState.characterEffects.push(manaGainObj);
+      this._updateEffectDisplay(this.elements.battleCharacterEffects, battleState.characterEffects);
+      setTimeout(() => {
+        battleState.characterEffects = battleState.characterEffects.filter(e => 
+          e.type !== manaGainObj.type || e.name !== manaGainObj.name);
+        this._updateEffectDisplay(this.elements.battleCharacterEffects, battleState.characterEffects);
+      }, manaGainObj.duration);
+    } else if (target === 'opponent') {
+      battleState.opponentEffects.push(manaGainObj);
+      this._updateEffectDisplay(this.elements.battleOpponentEffects, battleState.opponentEffects);
+      setTimeout(() => {
+        battleState.opponentEffects = battleState.opponentEffects.filter(e => 
+          e.type !== manaGainObj.type || e.name !== manaGainObj.name);
+        this._updateEffectDisplay(this.elements.battleOpponentEffects, battleState.opponentEffects);
+      }, manaGainObj.duration);
+    }
+  }
 }
 /**
- * Apply a weapon effect to the target
- * @param {Object} battleState - Battle state
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} time - Current battle time
- * @param {Object} weapon - Weapon with the effect
+ * Get the appropriate icon class for an effect type
+ * @param {string} effectType - Type of effect
+ * @returns {string} CSS class for the effect icon
  */
-function applyWeaponEffect(battleState, attacker, defender, time, weapon) {
-  const effect = weapon.effect;
-  switch (effect.type) {
-    case 'stun':
-      applyStunEffect(battleState, attacker, defender, time, weapon.name);
-      break;
+_getEffectIconClass(effectType) {
+  switch(effectType) {
+    case 'damageIncrease':
+    case 'selfHeal':
+    case 'regeneration':
+    case 'manaRegen':
+    case 'manaGain':
+      return 'buff-icon';
     case 'poison':
-      const poisonEffect = {
-        name: 'Poison',
-        type: 'poison',
-        damage: effect.damage,
-        duration: effect.duration,
-        interval: 1, 
-        lastProcTime: time,
-        endTime: time + effect.duration,
-        sourceName: attacker.name,
-        sourceId: attacker.id
-      };
-      applyPeriodicEffect(battleState, attacker, defender, time, poisonEffect);
-      break;
     case 'burning':
-      const burningEffect = {
-        name: 'Burning',
-        type: 'burning',
-        damage: effect.damage,
-        duration: effect.duration,
-        interval: 1, 
-        lastProcTime: time,
-        endTime: time + effect.duration,
-        sourceName: attacker.name,
-        sourceId: attacker.id
-      };
-      applyPeriodicEffect(battleState, attacker, defender, time, burningEffect);
-      break;
+      return 'dot-icon';
     case 'manaDrain':
-      const manaDrainEffect = {
-        name: 'Mana Drain',
-        type: 'manaDrain',
-        amount: effect.amount,
-        duration: 5, 
-        interval: 1, 
-        lastProcTime: time,
-        endTime: time + 5,
-        sourceName: attacker.name,
-        sourceId: attacker.id
-      };
-      applyPeriodicEffect(battleState, attacker, defender, time, manaDrainEffect);
-      break;
+      return 'periodic-icon';
+    case 'physicalReduction':
+    case 'magicReduction':
+      return 'protection-icon';
+    case 'attackSpeedReduction':
+      return 'speed-reduction-icon';
+    case 'stun':
+      return 'stun-icon';
     default:
-      console.warn(`Unknown weapon effect type: ${effect.type}`);
+      return 'buff-icon'; 
   }
 }
 /**
- * Apply a buff to a character
- * @param {Object} battleState - Battle state
- * @param {Object} character - Character receiving buff
- * @param {number} time - Current battle time
- * @param {Object} buff - Buff object to apply
+ * Get a description for an effect
+ * @param {string} effectType - Type of effect
+ * @param {number} amount - Effect amount (if applicable)
+ * @returns {string} Description of the effect
  */
-function applyBuff(battleState, character, time, buff) {
-  const existingBuff = character.buffs.find(b => b.type === buff.type);
-  if (existingBuff) {
-    existingBuff.endTime = time + buff.duration;
-    battleState.log.push(createLogEntry(time,
-      `${character.name}'s ${buff.name} is refreshed (${buff.duration} seconds)`,
-      { 
-        targetId: character.id, 
-        isSystem: true,
-        actionType: 'refresh-buff',
-        effectType: buff.type,
-        effectName: buff.name,
-        effectDuration: buff.duration
-      }));
-  } else {
-    character.buffs.push(buff);
-    battleState.log.push(createLogEntry(time,
-      `${character.name} gains ${buff.name} for ${buff.duration} seconds`,
-      { 
-        targetId: character.id, 
-        isSystem: true,
-        actionType: 'apply-buff',
-        effectType: buff.type,
-        effectName: buff.name,
-        effectDuration: buff.duration,
-        effectAmount: buff.amount
-      }));
+_getEffectDescription(effectType, amount) {
+  switch(effectType) {
+    case 'damageIncrease':
+      return `Increases damage by ${amount || 0}%`;
+    case 'physicalReduction':
+      return `Increases physical damage reduction by ${amount || 0}%`;
+    case 'magicReduction':
+      return `Increases magic damage reduction by ${amount || 0}%`;
+    case 'attackSpeedReduction':
+      return `Reduces attack speed by ${amount || 0}%`;
+    case 'poison':
+      return 'Deals poison damage over time';
+    case 'burning':
+      return 'Burns for damage over time';
+    case 'stun':
+      return 'Stunned: Skip next attack';
+    case 'selfHeal':
+      return `Heals for ${amount || 0} health`;
+    case 'regeneration':
+      return `Regenerates ${amount || 0} health periodically`;
+    case 'manaDrain':
+      return `Drains ${amount || 0} mana periodically`;
+    case 'manaRegen':
+      return `Regenerates ${amount || 0} mana periodically`;
+    default:
+      return `${effectType} effect`;
   }
 }
 /**
- * Apply a periodic effect to a character
- * @param {Object} battleState - Battle state
- * @param {Object} source - Source of the effect
- * @param {Object} target - Target of the effect
- * @param {number} time - Current battle time
- * @param {Object} effect - Effect object to apply
+ * Get description for mana effects
+ * @param {string} effectType - Type of mana effect
+ * @param {number} amount - Amount of mana affected
+ * @returns {string} Description of the mana effect
  */
-function applyPeriodicEffect(battleState, source, target, time, effect) {
-  const existingEffect = target.periodicEffects.find(e => e.type === effect.type);
-  if (existingEffect) {
-    existingEffect.endTime = time + effect.duration;
-    existingEffect.lastProcTime = time; 
-    battleState.log.push(createLogEntry(time,
-      `${target.name}'s ${effect.name} is refreshed (${effect.duration} seconds)`,
-      {
-        sourceId: source.id,
-        targetId: target.id,
-        isSystem: true,
-        actionType: 'refresh-effect',
-        effectType: effect.type,
-        effectName: effect.name,
-        effectDuration: effect.duration
-      }));
-  } else {
-    effect.sourceName = source.name;
-    effect.lastProcTime = time;
-    effect.interval = effect.interval || 1;
-    if (!effect.id) {
-      effect.id = `${effect.type}-${Date.now()}`;
+_getManaEffectDescription(effectType, amount) {
+  switch(effectType) {
+    case 'manaDrain':
+      return `Drains ${amount} mana periodically`;
+    case 'manaGain':
+      return `Gains ${amount} mana`;
+    case 'manaRegen':
+      return `Regenerates ${amount} mana periodically`;
+    default:
+      return `${effectType} effect`;
+  }
+}
+/**
+ * Determine if an effect is temporary
+ * @param {string} effectType - Type of effect
+ * @returns {boolean} Whether the effect is temporary
+ */
+_isTemporaryEffect(effectType) {
+  return ['stun', 'selfHeal', 'manaGain', 'manaRegen'].includes(effectType);
+}
+/**
+ * Update effect display
+ * @param {HTMLElement} container - Effect container element
+ * @param {Array} effects - Array of effects
+ */
+_updateEffectDisplay(container, effects) {
+  if (!container) return;
+  container.innerHTML = '';
+  if (!effects || effects.length === 0) return;
+  console.log('Updating effect display with effects:', effects);
+  effects.forEach(effect => {
+    const effectIcon = document.createElement('div');
+    let iconClass = 'effect-icon';
+    if (effect.iconClass) {
+      iconClass += ` ${effect.iconClass}`;
+    } else {
+      iconClass += ` ${this._getEffectIconClass(effect.type)}`;
     }
-    target.periodicEffects.push(effect);
-    battleState.log.push(createLogEntry(time,
-      `${target.name} is affected by ${effect.name} for ${effect.duration} seconds`,
-      {
-        sourceId: source.id,
-        targetId: target.id,
-        isSystem: true,
-        actionType: 'apply-effect',
-        effectType: effect.type,
-        effectName: effect.name,
-        effectDuration: effect.duration,
-        effectAmount: effect.damage || effect.amount
-      }));
-  }
+    effectIcon.className = iconClass;
+    effectIcon.textContent = effect.name.charAt(0).toUpperCase();
+    const tooltip = document.createElement('div');
+    tooltip.className = 'effect-tooltip';
+    tooltip.textContent = effect.name;
+    effectIcon.appendChild(tooltip);
+    container.appendChild(effectIcon);
+    console.log(`Added effect icon for ${effect.name} with class ${iconClass}`);
+  });
 }
 /**
- * Apply healing to a character
- * @param {Object} battleState - Battle state
- * @param {Object} character - Character to heal
- * @param {number} time - Current battle time
- * @param {Object} healEffect - Healing effect to apply
- * @returns {number} Amount healed
+ * Update health display to show current/max values instead of percentage
+ * @param {HTMLElement} element - Health bar element
+ * @param {number} healthPercent - Health percentage (0-100) for the bar width
+ * @param {number} currentHealth - Current health value
+ * @param {number} maxHealth - Maximum health value
  */
-function applyHeal(battleState, character, time, healEffect) {
-  const minDamage = character.stats.minMagicDamage;
-  const maxDamage = character.stats.maxMagicDamage;
-  const avgDamage = (minDamage + maxDamage) / 2;
-  const healAmount = Math.round(avgDamage * healEffect.multiplier);
-  const previousHealth = character.currentHealth;
-  character.currentHealth = Math.min(character.stats.health, character.currentHealth + healAmount);
-  const actualHeal = character.currentHealth - previousHealth;
-  battleState.log.push(createLogEntry(time,
-    `${character.name} is healed for ${actualHeal} health`,
-    {
-      targetId: character.id,
-      isSystem: true,
-      actionType: 'heal',
-      healAmount: actualHeal,
-      effectType: 'heal'
-    }));
-  return actualHeal;
+_updateHealthDisplay(element, healthPercent, currentHealth, maxHealth) {
+  element.style.width = `${healthPercent}%`;
+  element.textContent = `${Math.floor(currentHealth)} / ${maxHealth}`;
 }
 /**
- * Process all active effects on both characters
- * @param {Object} battleState - Battle state
- * @param {number} time - Current battle time
+ * Update mana display to show current/max values instead of percentage
+ * @param {HTMLElement} element - Mana bar element
+ * @param {number} manaPercent - Mana percentage (0-100) for the bar width
+ * @param {number} currentMana - Current mana value
+ * @param {number} maxMana - Maximum mana value
  */
-function processEffects(battleState, time) {
-  processCharacterEffects(battleState, battleState.character1, battleState.character2, time);
-  processCharacterEffects(battleState, battleState.character2, battleState.character1, time);
+_updateManaDisplay(element, manaPercent, currentMana, maxMana) {
+  element.style.width = `${manaPercent}%`;
+  element.textContent = `${Math.floor(currentMana)} / ${maxMana}`;
 }
-/**
- * Process effects on a single character
- * @param {Object} battleState - Battle state
- * @param {Object} character - Character with effects
- * @param {Object} opponent - Opponent character
- * @param {number} time - Current battle time
- */
-function processCharacterEffects(battleState, character, opponent, time) {
-  for (let i = character.periodicEffects.length - 1; i >= 0; i--) {
-    const effect = character.periodicEffects[i];
-    if (time >= effect.endTime) {
-      battleState.log.push(createLogEntry(time,
-        `${effect.name} effect on ${character.name} has expired`,
-        { 
-          targetId: character.id, 
-          actionType: 'effect-expiry',
-          effectType: effect.type,
-          effectName: effect.name,
-          isSystem: true 
-        }));
-      character.periodicEffects.splice(i, 1);
-      continue;
-    }
-    if (time >= effect.lastProcTime + effect.interval) {
-      const source = (effect.sourceName === battleState.character1.name) 
-        ? battleState.character1 
-        : battleState.character2;
-      const sourceId = source.id;
-      const targetId = character.id;
-      switch(effect.type) {
-        case 'poison':
-        case 'burning':
-          const beforeHealth = character.currentHealth;
-          const beforeMana = character.currentMana;
-          character.currentHealth -= effect.damage;
-          battleState.log.push(createLogEntry(time,
-            `${character.name} takes ${effect.damage} damage from ${effect.name}`,
-            { 
-              sourceId: sourceId,
-              targetId: targetId, 
-              actionType: 'periodic-damage',
-              effectType: effect.type,
-              effectName: effect.name,
-              damage: effect.damage,
-              isSystem: true 
-            }));
-          if (character.currentHealth <= 0) {
-            const defeatMessage = effect.type === 'burning' 
-              ? `${character.name} has been burned to ash!`
-              : `${character.name} has been defeated by ${effect.name}!`;
-            battleState.log.push(createLogEntry(time,
-              defeatMessage,
-              { 
-                targetId: targetId, 
-                actionType: 'defeat',
-                effectType: effect.type,
-                isSystem: true 
-              }));
-          }
-          break;
-        case 'manaDrain':
-          const beforeManaDrain = character.currentMana;
-          const manaDrained = Math.min(character.currentMana, effect.amount);
-          character.currentMana -= manaDrained;
-          const sourceBefore = source.currentMana;
-          source.currentMana = Math.min(source.stats.mana, source.currentMana + effect.amount);
-          if (manaDrained > 0) {
-            battleState.log.push(createLogEntry(time,
-              `${character.name} loses ${manaDrained} mana from ${effect.name}`,
-              { 
-                targetId: targetId, 
-                actionType: 'mana-drain',
-                effectType: 'manaDrain',
-                effectName: effect.name,
-                manaChange: -manaDrained,
-                isSystem: true 
-              }));
-            battleState.log.push(createLogEntry(time + 0.1,
-              `${source.name} gains ${effect.amount} mana from ${effect.name}`,
-              { 
-                targetId: sourceId, 
-                actionType: 'mana-gain',
-                effectType: 'manaGain',
-                effectName: effect.name,
-                manaChange: effect.amount,
-                isSystem: true 
-              }));
-          }
-          break;
-        case 'regeneration':
-          const healAmount = effect.amount;
-          character.currentHealth = Math.min(character.stats.health, character.currentHealth + healAmount);
-          battleState.log.push(createLogEntry(time,
-            `${character.name} regenerates ${healAmount} health from ${effect.name}`,
-            { 
-              targetId: targetId, 
-              actionType: 'regeneration',
-              effectType: 'regeneration',
-              effectName: effect.name,
-              healAmount: healAmount,
-              isSystem: true 
-            }));
-          break;
-        case 'manaRegen':
-          const manaAmount = effect.amount;
-          character.currentMana = Math.min(character.stats.mana, character.currentMana + manaAmount);
-          battleState.log.push(createLogEntry(time,
-            `${character.name} regenerates ${manaAmount} mana from ${effect.name}`,
-            { 
-              targetId: targetId, 
-              actionType: 'mana-regen',
-              effectType: 'manaRegen',
-              effectName: effect.name,
-              manaChange: manaAmount,
-              isSystem: true 
-            }));
-          break;
-        default:
-          console.warn(`Unknown periodic effect type: ${effect.type}`);
-      }
-      effect.lastProcTime = time;
-    }
-  }
-  for (let i = character.buffs.length - 1; i >= 0; i--) {
-    const buff = character.buffs[i];
-    if (time >= buff.endTime) {
-      character.buffs.splice(i, 1);
-      battleState.log.push(createLogEntry(time,
-        `${buff.name} buff on ${character.name} has expired`,
-        { 
-          targetId: character.id, 
-          actionType: 'buff-expiry',
-          effectType: buff.type,
-          effectName: buff.name,
-          isSystem: true 
-        }));
-    }
-  }
-}
-/**
- * Save a battle result to the battle logs
- * @param {Object} battleResult - Formatted battle result
- */
-function saveBattleResult(battleResult) {
-  const battlelogs = readDataFile('battlelogs.json');
-  battlelogs.push(battleResult);
-  return writeDataFile('battlelogs.json', battlelogs);
-}
-/**
- * Get battle results for a player
- * @param {string} playerId - Player ID
- * @returns {Array} Battles involving the player
- */
-function getPlayerBattles(playerId) {
-  const battlelogs = readDataFile('battlelogs.json');
-  return battlelogs.filter(battle => 
-    battle.character.playerId === playerId || 
-    battle.opponent.playerId === playerId
+  _updateCharacterHealth(battleState, damage) {
+  const maxHealth = battleState.characterMaxHealth;
+  const damagePercent = (damage / maxHealth) * 100;
+  battleState.characterHealth = Math.max(0, battleState.characterHealth - damagePercent);
+  battleState.characterCurrentHealth = Math.max(0, battleState.characterCurrentHealth - damage);
+  this._updateHealthDisplay(
+    this.elements.battleCharacterHealth, 
+    battleState.characterHealth, 
+    battleState.characterCurrentHealth, 
+    battleState.characterMaxHealth
   );
 }
-/**
- * Get a specific battle by ID
- * @param {string} battleId - Battle ID
- * @returns {Object|null} Battle or null if not found
- */
-function getBattle(battleId) {
-  const battlelogs = readDataFile('battlelogs.json');
-  return battlelogs.find(b => b.id === battleId) || null;
+  _updateOpponentHealth(battleState, damage) {
+  const maxHealth = battleState.opponentMaxHealth;
+  const damagePercent = (damage / maxHealth) * 100;
+  battleState.opponentHealth = Math.max(0, battleState.opponentHealth - damagePercent);
+  battleState.opponentCurrentHealth = Math.max(0, battleState.opponentCurrentHealth - damage);
+  this._updateHealthDisplay(
+    this.elements.battleOpponentHealth, 
+    battleState.opponentHealth, 
+    battleState.opponentCurrentHealth, 
+    battleState.opponentMaxHealth
+  );
 }
-/**
- * Enhanced server-side battle calculations for new stats
- */
-/**
- * Calculate if an attack hits based on accuracy and dodge
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {number} hitModifier - Optional modifier to hit chance (default: 1.0)
- * @returns {Object} Hit result with hits boolean and actionResult string
- */
-function calculateHitChance(attacker, defender, hitModifier = 1.0) {
-  const accuracy = attacker.stats.accuracy || 90;
-  let hitChance = accuracy * hitModifier;
-  const dodgeChance = defender.stats.dodgeChance || 0;
-  hitChance = Math.min(95, Math.max(10, hitChance - dodgeChance));
-  const hitRoll = Math.random() * 100;
-  const hits = hitRoll <= hitChance;
-  return {
-    hits,
-    actionResult: hits ? 'hit' : 'dodge'
-  };
+  _updateOpponentHeal(battleState, healAmount) {
+  const maxHealth = battleState.opponentMaxHealth;
+  const healPercent = (healAmount / maxHealth) * 100;
+  battleState.opponentHealth = Math.min(100, battleState.opponentHealth + healPercent);
+  battleState.opponentCurrentHealth = Math.min(battleState.opponentMaxHealth, battleState.opponentCurrentHealth + healAmount);
+  this._updateHealthDisplay(
+    this.elements.battleOpponentHealth, 
+    battleState.opponentHealth, 
+    battleState.opponentCurrentHealth, 
+    battleState.opponentMaxHealth
+  );
 }
-/**
- * Calculate if an attack is blocked
- * @param {Object} defender - Defending character
- * @returns {Object} Block result with blocks boolean
- */
-function calculateBlock(defender) {
-  const blockChance = defender.stats.blockChance || 0;
-  const blockRoll = Math.random() * 100;
-  const blocks = blockRoll <= blockChance;
-  return {
-    blocks
-  };
+  _updateCharacterMana(battleState, manaChange) {
+  const maxMana = battleState.characterMaxMana;
+  const manaPercent = (Math.abs(manaChange) / maxMana) * 100;
+  if (manaChange > 0) {
+    battleState.characterMana = Math.min(100, battleState.characterMana + manaPercent);
+    battleState.characterCurrentMana = Math.min(maxMana, battleState.characterCurrentMana + manaChange);
+  } else {
+    battleState.characterMana = Math.max(0, battleState.characterMana - manaPercent);
+    battleState.characterCurrentMana = Math.max(0, battleState.characterCurrentMana + manaChange); 
+  }
+  this._updateManaDisplay(
+    this.elements.battleCharacterMana, 
+    battleState.characterMana, 
+    battleState.characterCurrentMana, 
+    battleState.characterMaxMana
+  );
 }
-/**
- * Enhanced physical attack calculation with dodge, accuracy, and block
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {string} attackName - Name of the attack
- * @param {number} multiplier - Damage multiplier
- * @param {boolean} guaranteedCrit - Whether critical is guaranteed
- * @returns {Object} Attack result
- */
-function calculatePhysicalAttack(attacker, defender, attackName, multiplier = 1, guaranteedCrit = false) {
-  const hitResult = calculateHitChance(attacker, defender);
-  if (!hitResult.hits) {
-    return {
-      damage: 0,
-      isCritical: false,
-      baseDamage: 0,
-      damageType: 'physical',
-      attackName,
-      actionResult: hitResult.actionResult
-    };
+  _updateOpponentMana(battleState, manaChange) {
+  const maxMana = battleState.opponentMaxMana;
+  const manaPercent = (Math.abs(manaChange) / maxMana) * 100;
+  if (manaChange > 0) {
+    battleState.opponentMana = Math.min(100, battleState.opponentMana + manaPercent);
+    battleState.opponentCurrentMana = Math.min(maxMana, battleState.opponentCurrentMana + manaChange);
+  } else {
+    battleState.opponentMana = Math.max(0, battleState.opponentMana - manaPercent);
+    battleState.opponentCurrentMana = Math.max(0, battleState.opponentCurrentMana + manaChange); 
   }
-  const minDmg = attacker.stats.minPhysicalDamage;
-  const maxDmg = attacker.stats.maxPhysicalDamage;
-  let baseDamage = randomInt(minDmg, maxDmg);
-  baseDamage = Math.round(baseDamage * multiplier);
-  if (attacker.buffs) {
-    attacker.buffs.forEach(buff => {
-      if (buff.type === 'damageIncrease') {
-        const buffMultiplier = 1 + (buff.amount / 100);
-        baseDamage = Math.round(baseDamage * buffMultiplier);
-      }
-    });
-  }
-  const critChance = attacker.stats.criticalChance;
-  const isCrit = guaranteedCrit ? true : (Math.random() * 100 <= critChance);
-  if (isCrit) {
-    baseDamage = Math.round(baseDamage * 2);
-  }
-  const blockResult = calculateBlock(defender);
-  let actionResult = hitResult.actionResult;
-  if (blockResult.blocks) {
-    baseDamage = Math.round(baseDamage * 0.5);
-    actionResult = 'blocked';
-  }
-  let damageReduction = defender.stats.physicalDamageReduction / 100;
-  if (defender.buffs) {
-    defender.buffs.forEach(buff => {
-      if (buff.type === 'physicalReduction') {
-        damageReduction += buff.amount / 100;
-      }
-    });
-  }
-  damageReduction = Math.min(0.8, damageReduction);
-  const finalDamage = Math.max(1, Math.round(baseDamage * (1 - damageReduction)));
-  return {
-    damage: finalDamage,
-    isCritical: isCrit,
-    baseDamage: baseDamage,
-    damageType: 'physical',
-    attackName,
-    actionResult
-  };
+  this._updateManaDisplay(
+    this.elements.battleOpponentMana, 
+    battleState.opponentMana, 
+    battleState.opponentCurrentMana, 
+    battleState.opponentMaxMana
+  );
 }
-/**
- * Enhanced magic attack calculation with dodge mechanics
- * @param {Object} attacker - Attacking character
- * @param {Object} defender - Defending character
- * @param {string} attackName - Name of the attack
- * @param {number} multiplier - Damage multiplier
- * @returns {Object} Attack result
- */
-function calculateMagicAttack(attacker, defender, attackName, multiplier = 1) {
-  const hitModifier = 1.2; 
-  const hitResult = calculateHitChance(attacker, defender, hitModifier);
-  if (!hitResult.hits) {
-    return {
-      damage: 0,
-      isCritical: false,
-      baseDamage: 0,
-      damageType: 'magic',
-      attackName,
-      actionResult: hitResult.actionResult
-    };
-  }
-  const minDmg = attacker.stats.minMagicDamage;
-  const maxDmg = attacker.stats.maxMagicDamage;
-  let baseDamage = randomInt(minDmg, maxDmg);
-  baseDamage = Math.round(baseDamage * multiplier);
-  if (attacker.buffs) {
-    attacker.buffs.forEach(buff => {
-      if (buff.type === 'damageIncrease') {
-        const buffMultiplier = 1 + (buff.amount / 100);
-        baseDamage = Math.round(baseDamage * buffMultiplier);
-      }
-    });
-  }
-  const critChance = attacker.stats.spellCritChance;
-  const isCrit = (Math.random() * 100 <= critChance);
-  if (isCrit) {
-    baseDamage = Math.round(baseDamage * 2);
-  }
-  let damageReduction = defender.stats.magicDamageReduction / 100;
-  if (defender.buffs) {
-    defender.buffs.forEach(buff => {
-      if (buff.type === 'magicReduction') {
-        damageReduction += buff.amount / 100;
-      }
-    });
-  }
-  damageReduction = Math.min(0.8, damageReduction);
-  const finalDamage = Math.max(1, Math.round(baseDamage * (1 - damageReduction)));
-  return {
-    damage: finalDamage,
-    isCritical: isCrit,
-    baseDamage: baseDamage,
-    damageType: 'magic',
-    attackName,
-    actionResult: hitResult.actionResult
-  };
 }
-module.exports = {
-  simulateBattle,
-  saveBattleResult,
-  getPlayerBattles,
-  getBattle
-};

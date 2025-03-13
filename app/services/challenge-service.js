@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { readDataFile, writeDataFile } = require('../utils/data-utils');
 const { calculateStats, createBattleState } = require('../models/character-model');
+const itemService = require('./item-service');
 const battleService = require('./battle-service');
 const abilityService = require('./ability-service');
 /**
@@ -89,6 +90,10 @@ function startChallengeBattle(character, challenge) {
     if (!challenge.currentOpponent.id || !challenge.currentOpponent.id.startsWith('npc-')) {
       challenge.currentOpponent.id = `npc-${uuidv4()}`;
     }
+    
+    // Ensure opponent has equipment stats calculated
+    updateOpponentEquipmentStats(challenge.currentOpponent);
+    
     const charCopy = JSON.parse(JSON.stringify(character));
     const opponentCopy = JSON.parse(JSON.stringify(challenge.currentOpponent));
     if (!charCopy.attackType) charCopy.attackType = 'physical';
@@ -146,25 +151,20 @@ function updateChallengeAfterBattle(character, challenge, opponent, battleResult
     console.error('Challenge not found:', challenge.id);
     return;
   }
-  
   const isPlayerWinner = battleResult.winner === character.id;
-  
-  // Only increment the round if the player won
   if (isPlayerWinner) {
     challenge.round += 1;
-    challenge.expGained += calculateChallengeExp(challenge.round - 1); // Use current round for exp
+    challenge.expGained += calculateChallengeExp(challenge.round);
     challenge.geneticMemory.push({
       attributes: opponent.attributes,
       rotation: opponent.rotation,
       attackType: opponent.attackType,
+      equipment: opponent.equipment || {},
       fitness: calculateOpponentFitness(opponent, character, battleResult)
     });
-    
     if (challenge.geneticMemory.length > 10) {
       challenge.geneticMemory.shift(); 
     }
-    
-    // Generate next opponent - using character's current level
     const totalAttributePoints = calculateTotalAttributePoints(character.attributes);
     if (challenge.geneticMemory.length > 1) {
       const population = generatePopulation(character, challenge);
@@ -179,21 +179,67 @@ function updateChallengeAfterBattle(character, challenge, opponent, battleResult
         character.level
       );
     }
-    
     if (!challenge.currentOpponent.id || !challenge.currentOpponent.id.startsWith('npc-')) {
       challenge.currentOpponent.id = `npc-${uuidv4()}`;
     }
   } else {
-    // If the player lost, don't increment the round, just update the opponent's level if needed
     if (challenge.currentOpponent && challenge.currentOpponent.level !== character.level) {
       challenge.currentOpponent.level = character.level;
     }
   }
-  
   challenge.lastBattleId = battleResult.id;
   challenge.updatedAt = new Date().toISOString();
   challenges[index] = challenge;
   writeDataFile('challenges.json', challenges);
+}
+/**
+ * Update an opponent's equipment and recalculate stats
+ * @param {Object} opponent - The opponent to update
+ */
+/**
+ * Update an opponent's stats based on their equipment
+ * @param {Object} opponent - The opponent to update
+ */
+function updateOpponentEquipmentStats(opponent) {
+  if (!opponent.equipment || !opponent.stats) return;
+  
+  // Calculate base stats without equipment
+  const baseStats = calculateStats(opponent.attributes);
+  
+  // Apply equipment stats
+  const statsWithEquipment = { ...baseStats };
+  
+  Object.values(opponent.equipment).forEach(item => {
+    if (!item || !item.stats) return;
+    Object.entries(item.stats || {}).forEach(([statName, value]) => {
+      if (statsWithEquipment[statName] !== undefined) {
+        statsWithEquipment[statName] += value;
+      } else {
+        statsWithEquipment[statName] = value;
+      }
+    });
+  });
+  
+  // Update opponent stats
+  opponent.stats = statsWithEquipment;
+}
+
+/**
+ * Validate equipment setup for a character
+ * @param {Object} equipment - Equipment to validate
+ * @returns {Object} Valid equipment setup
+ */
+function validateOpponentEquipment(equipment) {
+  if (!equipment) return {};
+  
+  const validatedEquipment = {...equipment};
+  
+  // Check for two-handed weapon and remove offhand if needed
+  if (validatedEquipment.mainHand && validatedEquipment.mainHand.twoHanded && validatedEquipment.offHand) {
+    delete validatedEquipment.offHand;
+  }
+  
+  return validatedEquipment;
 }
 /**
  * Reset a challenge for a character
@@ -268,19 +314,56 @@ function generateRandomOpponent(name, totalAttributePoints, level = 1) {
     attributes[randomAttr]++;
     remainingPoints--;
   }
+  
+  // Random equipment setup
+  const equipment = {};
+  const slots = ['head', 'chest', 'legs', 'mainHand', 'offHand'];
+  const allItems = require('../data/items.json');
+  
+  // Calculate how many slots to fill (the higher the round, the more likely to have more items)
+  const maxSlots = Math.min(slots.length, Math.floor(Math.random() * 3) + 1);
+  const shuffledSlots = slots.sort(() => 0.5 - Math.random()).slice(0, maxSlots);
+  
+  shuffledSlots.forEach(slot => {
+    const validItems = allItems.filter(item => item.slot === slot);
+    if (validItems.length > 0) {
+      const randomItem = validItems[Math.floor(Math.random() * validItems.length)];
+      equipment[slot] = randomItem;
+    }
+  });
+  
+  // Calculate base stats
   const stats = calculateStats(attributes);
+  
+  // Apply equipment stats directly in the opponent object
+  // Instead of using characterModel.calculateEquipmentStats
+  const statsWithEquipment = { ...stats };
+  
+  Object.values(equipment).forEach(item => {
+    if (!item || !item.stats) return;
+    Object.entries(item.stats || {}).forEach(([statName, value]) => {
+      if (statsWithEquipment[statName] !== undefined) {
+        statsWithEquipment[statName] += value;
+      } else {
+        statsWithEquipment[statName] = value;
+      }
+    });
+  });
+  
   const abilities = abilityService.loadAbilities();
   const rotation = getRandomRotation(abilities, 3 + Math.floor(Math.random() * 3)); 
   const attackType = Math.random() > 0.5 ? 'physical' : 'magic';
+  
   return {
     id: `npc-${uuidv4()}`,
     name: name,
     playerId: 'ai',
     attributes,
-    stats,
+    stats: statsWithEquipment,
+    equipment,
     rotation,
     attackType,
-    level: level, 
+    level: level,
     isNPC: true
   };
 }
@@ -363,13 +446,34 @@ function generateOpponentFromMemory(character, memory, totalAttributePoints, rou
       }
     }
   }
+  
+  // Equipment from memory or generate new
+  const equipment = memory.equipment || {};
+  
+  // Calculate base stats
   const stats = calculateStats(attributes);
+  
+  // Apply equipment stats directly
+  const statsWithEquipment = { ...stats };
+  
+  Object.values(equipment).forEach(item => {
+    if (!item || !item.stats) return;
+    Object.entries(item.stats || {}).forEach(([statName, value]) => {
+      if (statsWithEquipment[statName] !== undefined) {
+        statsWithEquipment[statName] += value;
+      } else {
+        statsWithEquipment[statName] = value;
+      }
+    });
+  });
+  
   return {
     id: `npc-${uuidv4()}`,
     name: `${character.name}'s Rival Lvl ${round}`,
     playerId: 'ai',
     attributes,
-    stats,
+    stats: statsWithEquipment,
+    equipment,
     rotation: memory.rotation || [],
     attackType: memory.attackType || 'physical',
     level: character.level, 
@@ -409,6 +513,25 @@ function crossover(parent1, parent2, totalAttributePoints) {
       }
     }
   }
+  
+  // Handle equipment crossover
+  const equipment = {};
+  const slots = ['head', 'chest', 'legs', 'mainHand', 'offHand']; // Standard equipment slots
+  
+  // For each slot, randomly choose equipment from either parent or none
+  slots.forEach(slot => {
+    const parentEquipment = [];
+    if (parent1.equipment && parent1.equipment[slot]) parentEquipment.push(parent1.equipment[slot]);
+    if (parent2.equipment && parent2.equipment[slot]) parentEquipment.push(parent2.equipment[slot]);
+    
+    // Chance to inherit equipment increases with fitness
+    const inheritChance = 0.5 + (Math.min(parent1.fitness, parent2.fitness) / 2000);
+    
+    if (parentEquipment.length > 0 && Math.random() < inheritChance) {
+      equipment[slot] = parentEquipment[Math.floor(Math.random() * parentEquipment.length)];
+    }
+  });
+  
   const rotation = [];
   const parent1Rotation = parent1.rotation || [];
   const parent2Rotation = parent2.rotation || [];
@@ -429,6 +552,7 @@ function crossover(parent1, parent2, totalAttributePoints) {
   const attackType = parent1.fitness >= parent2.fitness ? parent1.attackType : parent2.attackType;
   return {
     attributes,
+    equipment,
     rotation: uniqueRotation,
     attackType,
     fitness: 0 
@@ -448,6 +572,45 @@ function mutate(memory, totalAttributePoints) {
   } while (decreaseAttr === increaseAttr || memory.attributes[decreaseAttr] <= 1);
   memory.attributes[increaseAttr]++;
   memory.attributes[decreaseAttr]--;
+  
+  // Equipment mutations
+  const equipmentMutationChance = 0.3;
+  if (Math.random() < equipmentMutationChance) {
+    // Get equipment slots and all available items
+    const slots = ['head', 'chest', 'legs', 'mainHand', 'offHand']; // Standard equipment slots
+    const allItems = require('../data/items.json');
+    
+    // Randomly select a slot to mutate
+    const slotToMutate = slots[Math.floor(Math.random() * slots.length)];
+    const itemsForSlot = allItems.filter(item => item.slot === slotToMutate);
+    
+    if (!memory.equipment) memory.equipment = {};
+    
+    if (memory.equipment[slotToMutate]) {
+      // 30% chance to remove equipment
+      if (Math.random() < 0.3) {
+        delete memory.equipment[slotToMutate];
+      } 
+      // 40% chance to replace with another item
+      else if (Math.random() < 0.4 && itemsForSlot.length > 1) {
+        const currentItemId = memory.equipment[slotToMutate].id;
+        const otherItems = itemsForSlot.filter(item => item.id !== currentItemId);
+        if (otherItems.length > 0) {
+          memory.equipment[slotToMutate] = otherItems[Math.floor(Math.random() * otherItems.length)];
+        }
+      }
+    } 
+    // 60% chance to add equipment to an empty slot
+    else if (Math.random() < 0.6 && itemsForSlot.length > 0) {
+      memory.equipment[slotToMutate] = itemsForSlot[Math.floor(Math.random() * itemsForSlot.length)];
+    }
+    
+    // Handle two-handed weapon logic
+    if (memory.equipment.mainHand && memory.equipment.mainHand.twoHanded && memory.equipment.offHand) {
+      delete memory.equipment.offHand;
+    }
+  }
+  
   if (memory.rotation && memory.rotation.length > 0) {
     if (Math.random() < 0.5) {
       const abilities = abilityService.loadAbilities();
@@ -472,8 +635,12 @@ function mutate(memory, totalAttributePoints) {
  */
 function evaluatePopulation(population, character) {
   const evaluatedPopulation = population.map(opponent => {
-    const opponentState = createBattleState(opponent);
-    const characterState = createBattleState(character);
+    // Ensure opponent has proper stats including equipment bonuses
+    updateOpponentEquipmentStats(opponent);
+    
+    // Validate equipment (handle two-handed weapon conflict, etc.)
+    opponent.equipment = validateOpponentEquipment(opponent.equipment || {});
+    
     const numSims = 3;
     let totalFitness = 0;
     for (let i = 0; i < numSims; i++) {
@@ -512,7 +679,16 @@ function calculateOpponentFitness(opponent, character, battleResult) {
     const damagePercent = damageDealt / characterMaxHealth;
     fitness += damagePercent * 1000; 
   }
+  
+  // Add bonus fitness for each equipped item (encourages equipment use)
+  if (opponent.equipment) {
+    const equippedItemCount = Object.keys(opponent.equipment).filter(slot => opponent.equipment[slot]).length;
+    fitness += equippedItemCount * 15;
+  }
+  
+  // Add some randomness to fitness to avoid local optima
   fitness += Math.random() * 10;
+  
   return fitness;
 }
 /**

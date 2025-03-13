@@ -260,6 +260,7 @@ function dumpCharacterState(character, label) {
     buffs: character.buffs,
     effects: character.periodicEffects,
     cooldowns: character.cooldowns,
+    equipment: character.equipment,
     timestamp: new Date().toISOString()
   };
 
