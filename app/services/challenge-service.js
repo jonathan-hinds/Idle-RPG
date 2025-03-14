@@ -200,6 +200,10 @@ function updateChallengeAfterBattle(character, challenge, opponent, battleResult
  * Update an opponent's stats based on their equipment
  * @param {Object} opponent - The opponent to update
  */
+/**
+ * Update an opponent's stats based on their equipment
+ * @param {Object} opponent - The opponent to update
+ */
 function updateOpponentEquipmentStats(opponent) {
   if (!opponent.equipment || !opponent.stats) return;
   
@@ -209,16 +213,27 @@ function updateOpponentEquipmentStats(opponent) {
   // Apply equipment stats
   const statsWithEquipment = { ...baseStats };
   
+  // Collect attack speed modifiers separately
+  let attackSpeedModifier = 0;
+  
   Object.values(opponent.equipment).forEach(item => {
     if (!item || !item.stats) return;
     Object.entries(item.stats || {}).forEach(([statName, value]) => {
-      if (statsWithEquipment[statName] !== undefined) {
+      if (statName === 'attackSpeed') {
+        // Collect attackSpeed modifiers as percentages
+        attackSpeedModifier += value;
+      } else if (statsWithEquipment[statName] !== undefined) {
         statsWithEquipment[statName] += value;
       } else {
         statsWithEquipment[statName] = value;
       }
     });
   });
+  
+  // Apply attack speed as a percentage modifier
+  if (attackSpeedModifier !== 0) {
+    statsWithEquipment.attackSpeed *= (1 + attackSpeedModifier / 100);
+  }
   
   // Update opponent stats
   opponent.stats = statsWithEquipment;
