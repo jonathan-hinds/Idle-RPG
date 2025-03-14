@@ -46,7 +46,10 @@ function calculateEquipmentStats(baseStats, equipment) {
   Object.values(equipment).forEach(item => {
     if (!item) return;
     Object.entries(item.stats || {}).forEach(([statName, value]) => {
-      if (combinedStats[statName] !== undefined) {
+      if (statName === 'attackSpeed') {
+        // Apply attack speed as a percentage reduction
+        combinedStats[statName] = combinedStats[statName] * (1 + value/100);
+      } else if (combinedStats[statName] !== undefined) {
         combinedStats[statName] += value;
       } else {
         combinedStats[statName] = value;

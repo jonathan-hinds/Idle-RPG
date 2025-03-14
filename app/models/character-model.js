@@ -197,6 +197,8 @@ function updateCharacterWithEquipment(characterId) {
   const baseAttributes = {...character.attributes};
   const totalAttributes = {...baseAttributes};
   const equipment = inventory.equipment || {};
+  
+  // Calculate attribute changes from equipment
   Object.values(equipment).forEach(item => {
     if (!item || !item.stats) return;
     Object.entries(item.stats).forEach(([statName, value]) => {
@@ -205,15 +207,30 @@ function updateCharacterWithEquipment(characterId) {
       }
     });
   });
+  
+  // Calculate updated stats from the modified attributes
   const updatedStats = calculateStats(totalAttributes);
+  
+  // Apply equipment stats that don't directly affect attributes
+  // THIS IS THE CRITICAL CHANGE - handle attackSpeed specially
+  let attackSpeedModifier = 0;
   Object.values(equipment).forEach(item => {
     if (!item || !item.stats) return;
     Object.entries(item.stats).forEach(([statName, value]) => {
-      if (!totalAttributes.hasOwnProperty(statName) && updatedStats.hasOwnProperty(statName)) {
+      if (statName === 'attackSpeed') {
+        // Collect attackSpeed modifiers as percentages
+        attackSpeedModifier += value;
+      } else if (!totalAttributes.hasOwnProperty(statName) && updatedStats.hasOwnProperty(statName)) {
         updatedStats[statName] += value;
       }
     });
   });
+  
+  // Apply attack speed as a percentage modifier
+  if (attackSpeedModifier !== 0) {
+    updatedStats.attackSpeed *= (1 + attackSpeedModifier / 100);
+  }
+  
   character.stats = updatedStats;
   character.equipment = equipment;
   writeDataFile('characters.json', characters);
