@@ -7,7 +7,13 @@ const { readDataFile, writeDataFile } = require('../utils/data-utils');
  * @param {Object} attributes - Character attributes
  * @returns {Object} Calculated stats
  */
-function calculateStats(attributes) {
+/**
+ * Calculate character stats based on attributes with non-linear scaling
+ * @param {Object} attributes - Character attributes
+ * @param {Object} equipment - Character equipment (optional)
+ * @returns {Object} Calculated stats
+ */
+function calculateStats(attributes, equipment = {}) {
   const { strength, agility, stamina, intellect, wisdom } = attributes;
   const logScale = (value, base, multiplier, min, max) => {
     const result = Math.min(max, Math.max(min, base + multiplier * Math.log10(value + 1)));
@@ -43,14 +49,89 @@ function calculateStats(attributes) {
   const accuracy = sigmoidScale(accuracyValue, 60, 30, 0.07, 95);
   const blockValue = (strength * 0.6) + (stamina * 0.8);
   const blockChance = sigmoidScale(blockValue, 0, 30, 0.08, 40);
+  
+  // Base damage calculations
   const physMinMultiplier = 1.5;
   const physMaxMultiplier = 2.5 + (agility * 0.05);
-  const minPhysicalDamage = Math.floor(primaryPhysicalPower * physMinMultiplier);
-  const maxPhysicalDamage = Math.floor(primaryPhysicalPower * physMaxMultiplier);
+  let minPhysicalDamage = Math.floor(primaryPhysicalPower * physMinMultiplier);
+  let maxPhysicalDamage = Math.floor(primaryPhysicalPower * physMaxMultiplier);
+  
   const magicMinMultiplier = 1.5;
   const magicMaxMultiplier = 2.5 + (wisdom * 0.05);
-  const minMagicDamage = Math.floor(primaryMagicPower * magicMinMultiplier);
-  const maxMagicDamage = Math.floor(primaryMagicPower * magicMaxMultiplier);
+  let minMagicDamage = Math.floor(primaryMagicPower * magicMinMultiplier);
+  let maxMagicDamage = Math.floor(primaryMagicPower * magicMaxMultiplier);
+  
+  // Add weapon damage from equipment if provided
+  if (equipment && Object.keys(equipment).length > 0) {
+    // Helper function to calculate weapon damage with scaling
+    const calculateWeaponDamage = (weapon) => {
+      if (!weapon || weapon.type !== 'weapon' || !weapon.scaling) {
+        return null;
+      }
+      
+      let scalingBonusMin = 0;
+      let scalingBonusMax = 0;
+      
+      weapon.scaling.forEach(scaling => {
+        const statValue = attributes[scaling.stat] || 0;
+        let multiplier = 0;
+        
+        // Convert grade to multiplier
+        switch(scaling.grade.toUpperCase()) {
+          case 'S': multiplier = 1.0; break;
+          case 'A': multiplier = 0.8; break;
+          case 'B': multiplier = 0.65; break;
+          case 'C': multiplier = 0.45; break;
+          case 'D': multiplier = 0.25; break;
+          case 'E': multiplier = 0.1; break;
+        }
+        
+        scalingBonusMin += Math.floor(statValue * multiplier);
+        scalingBonusMax += Math.floor(statValue * multiplier * 1.2);
+      });
+      
+      return {
+        minDamage: (weapon.minDamage || 0) + scalingBonusMin,
+        maxDamage: (weapon.maxDamage || 0) + scalingBonusMax
+      };
+    };
+    
+    // Apply main hand weapon damage
+    if (equipment.mainHand && equipment.mainHand.type === 'weapon') {
+      const mainHandDamage = calculateWeaponDamage(equipment.mainHand);
+      if (mainHandDamage) {
+        // For physical weapons, add to physical damage
+        if (equipment.mainHand.scaling.some(s => s.stat === 'strength' || s.stat === 'agility')) {
+          minPhysicalDamage += mainHandDamage.minDamage;
+          maxPhysicalDamage += mainHandDamage.maxDamage;
+        } 
+        // For magical weapons, add to magic damage
+        else if (equipment.mainHand.scaling.some(s => s.stat === 'intellect' || s.stat === 'wisdom')) {
+          minMagicDamage += mainHandDamage.minDamage;
+          maxMagicDamage += mainHandDamage.maxDamage;
+        }
+      }
+    }
+    
+    // Apply off-hand weapon damage if not using two-handed weapon
+    if (equipment.offHand && equipment.offHand.type === 'weapon' && 
+        (!equipment.mainHand || !equipment.mainHand.twoHanded)) {
+      const offHandDamage = calculateWeaponDamage(equipment.offHand);
+      if (offHandDamage) {
+        // For physical weapons, add to physical damage (with reduction for off-hand)
+        if (equipment.offHand.scaling.some(s => s.stat === 'strength' || s.stat === 'agility')) {
+          minPhysicalDamage += Math.floor(offHandDamage.minDamage * 0.6);
+          maxPhysicalDamage += Math.floor(offHandDamage.maxDamage * 0.6);
+        } 
+        // For magical weapons, add to magic damage
+        else if (equipment.offHand.scaling.some(s => s.stat === 'intellect' || s.stat === 'wisdom')) {
+          minMagicDamage += Math.floor(offHandDamage.minDamage * 0.6);
+          maxMagicDamage += Math.floor(offHandDamage.maxDamage * 0.6);
+        }
+      }
+    }
+  }
+  
   return {
     minPhysicalDamage,
     maxPhysicalDamage,
@@ -185,6 +266,11 @@ function calculateBattleExperience(isWinner, characterLevel, isMatchmade) {
  * @param {string} characterId - Character ID
  * @returns {Object} Updated character
  */
+/**
+ * Update a character's stats based on their equipment
+ * @param {string} characterId - Character ID
+ * @returns {Object} Updated character
+ */
 function updateCharacterWithEquipment(characterId) {
   const characters = readDataFile('characters.json');
   const inventories = readDataFile('inventories.json');
@@ -208,8 +294,8 @@ function updateCharacterWithEquipment(characterId) {
     });
   });
   
-  // Calculate updated stats from the modified attributes
-  const updatedStats = calculateStats(totalAttributes);
+  // Calculate updated stats from the modified attributes and equipment
+  const updatedStats = calculateStats(totalAttributes, equipment);
   
   // Apply equipment stats that don't directly affect attributes
   // THIS IS THE CRITICAL CHANGE - handle attackSpeed specially

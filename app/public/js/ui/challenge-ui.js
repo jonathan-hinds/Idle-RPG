@@ -95,7 +95,7 @@ showChallengeStatus(challenge) {
     this.elements.challengeOpponentInfo.classList.add('d-none');
   }
 }
-  /**
+/**
  * Render opponent equipment
  * @param {Object} equipment - Equipped items
  */
@@ -109,12 +109,15 @@ renderOpponentEquipment(equipment) {
     return;
   }
   
+  // Reference the ItemUI instance to use its helper functions
+  const itemUI = window.ItemUI;
+  
   let html = '<div class="mt-2">';
   
   for (const [slot, item] of Object.entries(equipment)) {
     if (!item) continue;
     
-    const slotName = this._formatSlotName(slot);
+    const slotName = itemUI._formatSlotName(slot);
     const itemTypeClass = item.type === 'weapon' ? 'border-warning' : 'border-secondary';
     
     html += `
@@ -124,12 +127,32 @@ renderOpponentEquipment(equipment) {
             <div class="fw-bold">${item.name}</div>
             <small class="text-muted">${slotName}</small>
           </div>
-          <small class="text-muted">${slotName === 'Head' ? 'Head' : ''}</small>
-        </div>
-        ${item.stats ? `<div class="mt-1 small text-primary">${this._formatItemStats(item.stats)}</div>` : ''}
-        ${item.effect ? `<div class="mt-1 small text-purple">${this._formatItemEffect(item.effect)}</div>` : ''}
-      </div>
-    `;
+        </div>`;
+        
+    // Add weapon damage and scaling for weapons
+    if (item.type === 'weapon' && item.minDamage) {
+      html += `<div class="mt-1 small text-primary">Damage: ${item.minDamage}-${item.maxDamage}</div>`;
+      
+      if (item.scaling && item.scaling.length > 0) {
+        html += '<div class="mt-1 small">';
+        html += item.scaling.map(scaling => {
+          const statName = itemUI._formatStatName(scaling.stat);
+          const gradeClass = Item.getScalingGradeClass(scaling.grade);
+          return `<span class="me-2">${statName}: <span class="${gradeClass}">${scaling.grade}</span></span>`;
+        }).join('');
+        html += '</div>';
+      }
+    }
+    
+    if (item.stats) {
+      html += `<div class="mt-1 small text-primary">${itemUI._formatItemStats(item.stats)}</div>`;
+    }
+    
+    if (item.effect) {
+      html += `<div class="mt-1 small text-purple">${itemUI._formatItemEffect(item.effect)}</div>`;
+    }
+    
+    html += `</div>`;
   }
   
   html += '</div>';

@@ -5,17 +5,17 @@ class CombatCalculator {
   constructor() {
     this.utils = window.Utils;
   }
-  /**
-   * Calculate a physical attack
-   * @param {Object} attacker - Attacking character
-   * @param {Object} defender - Defending character
-   * @param {string} attackName - Name of the attack
-   * @param {number} multiplier - Damage multiplier
-   * @param {boolean} guaranteedCrit - Whether critical is guaranteed
-   * @returns {Object} Attack result
-   */
+/**
+ * Enhanced physical attack calculation with dodge, accuracy, and block
+ * @param {Object} attacker - Attacking character
+ * @param {Object} defender - Defending character
+ * @param {string} attackName - Name of the attack
+ * @param {number} multiplier - Damage multiplier
+ * @param {boolean} guaranteedCrit - Whether critical is guaranteed
+ * @returns {Object} Attack result
+ */
 calculatePhysicalAttack(attacker, defender, attackName, multiplier = 1, guaranteedCrit = false) {
-  const hitResult = this.calculateHitChance(attacker, defender);
+  const hitResult = calculateHitChance(attacker, defender);
   if (!hitResult.hits) {
     return {
       damage: 0,
@@ -23,13 +23,12 @@ calculatePhysicalAttack(attacker, defender, attackName, multiplier = 1, guarante
       baseDamage: 0,
       damageType: 'physical',
       attackName,
-      actionResult: hitResult.actionResult,
-      weaponEffect: null
+      actionResult: hitResult.actionResult
     };
   }
   const minDmg = attacker.stats.minPhysicalDamage;
   const maxDmg = attacker.stats.maxPhysicalDamage;
-  let baseDamage = this.utils.randomInt(minDmg, maxDmg);
+  let baseDamage = randomInt(minDmg, maxDmg);
   baseDamage = Math.round(baseDamage * multiplier);
   if (attacker.buffs) {
     attacker.buffs.forEach(buff => {
@@ -44,7 +43,7 @@ calculatePhysicalAttack(attacker, defender, attackName, multiplier = 1, guarante
   if (isCrit) {
     baseDamage = Math.round(baseDamage * 2);
   }
-  const blockResult = this.calculateBlock(defender);
+  const blockResult = calculateBlock(defender);
   let actionResult = hitResult.actionResult;
   if (blockResult.blocks) {
     baseDamage = Math.round(baseDamage * 0.5);
@@ -103,9 +102,17 @@ calculatePhysicalAttack(attacker, defender, attackName, multiplier = 1, guarante
    * @param {number} multiplier - Damage multiplier
    * @returns {Object} Attack result
    */
+/**
+ * Enhanced magic attack calculation with dodge mechanics
+ * @param {Object} attacker - Attacking character
+ * @param {Object} defender - Defending character
+ * @param {string} attackName - Name of the attack
+ * @param {number} multiplier - Damage multiplier
+ * @returns {Object} Attack result
+ */
 calculateMagicAttack(attacker, defender, attackName, multiplier = 1) {
   const hitModifier = 1.2; 
-  const hitResult = this.calculateHitChance(attacker, defender, hitModifier);
+  const hitResult = calculateHitChance(attacker, defender, hitModifier);
   if (!hitResult.hits) {
     return {
       damage: 0,
@@ -113,13 +120,12 @@ calculateMagicAttack(attacker, defender, attackName, multiplier = 1) {
       baseDamage: 0,
       damageType: 'magic',
       attackName,
-      actionResult: hitResult.actionResult,
-      weaponEffect: null
+      actionResult: hitResult.actionResult
     };
   }
   const minDmg = attacker.stats.minMagicDamage;
   const maxDmg = attacker.stats.maxMagicDamage;
-  let baseDamage = this.utils.randomInt(minDmg, maxDmg);
+  let baseDamage = randomInt(minDmg, maxDmg);
   baseDamage = Math.round(baseDamage * multiplier);
   if (attacker.buffs) {
     attacker.buffs.forEach(buff => {

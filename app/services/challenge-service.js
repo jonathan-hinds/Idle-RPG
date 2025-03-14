@@ -204,6 +204,10 @@ function updateChallengeAfterBattle(character, challenge, opponent, battleResult
  * Update an opponent's stats based on their equipment
  * @param {Object} opponent - The opponent to update
  */
+/**
+ * Update an opponent's stats based on their equipment
+ * @param {Object} opponent - The opponent to update
+ */
 function updateOpponentEquipmentStats(opponent) {
   if (!opponent.equipment || !opponent.stats) return;
   
@@ -211,7 +215,7 @@ function updateOpponentEquipmentStats(opponent) {
   const baseStats = calculateStats(opponent.attributes);
   
   // Apply equipment stats
-  const statsWithEquipment = { ...baseStats };
+  const statsWithEquipment = calculateStats(opponent.attributes, opponent.equipment);
   
   // Collect attack speed modifiers separately
   let attackSpeedModifier = 0;
@@ -222,10 +226,10 @@ function updateOpponentEquipmentStats(opponent) {
       if (statName === 'attackSpeed') {
         // Collect attackSpeed modifiers as percentages
         attackSpeedModifier += value;
-      } else if (statsWithEquipment[statName] !== undefined) {
+      } else if (statName !== 'strength' && statName !== 'agility' && 
+                 statName !== 'stamina' && statName !== 'intellect' && 
+                 statName !== 'wisdom' && statsWithEquipment[statName] !== undefined) {
         statsWithEquipment[statName] += value;
-      } else {
-        statsWithEquipment[statName] = value;
       }
     });
   });
@@ -314,6 +318,12 @@ function calculateTotalAttributePoints(attributes) {
  * @param {number} totalAttributePoints - Total attribute points to distribute
  * @returns {Object} Random opponent character
  */
+/**
+ * Generate a random opponent with given attribute points
+ * @param {string} name - Opponent name
+ * @param {number} totalAttributePoints - Total attribute points to distribute
+ * @returns {Object} Random opponent character
+ */
 function generateRandomOpponent(name, totalAttributePoints, level = 1) {
   const attributes = {
     strength: 1,
@@ -347,23 +357,8 @@ function generateRandomOpponent(name, totalAttributePoints, level = 1) {
     }
   });
   
-  // Calculate base stats
-  const stats = calculateStats(attributes);
-  
-  // Apply equipment stats directly in the opponent object
-  // Instead of using characterModel.calculateEquipmentStats
-  const statsWithEquipment = { ...stats };
-  
-  Object.values(equipment).forEach(item => {
-    if (!item || !item.stats) return;
-    Object.entries(item.stats || {}).forEach(([statName, value]) => {
-      if (statsWithEquipment[statName] !== undefined) {
-        statsWithEquipment[statName] += value;
-      } else {
-        statsWithEquipment[statName] = value;
-      }
-    });
-  });
+  // Calculate stats with equipment
+  const stats = calculateStats(attributes, equipment);
   
   const abilities = abilityService.loadAbilities();
   const rotation = getRandomRotation(abilities, 3 + Math.floor(Math.random() * 3)); 
@@ -374,7 +369,7 @@ function generateRandomOpponent(name, totalAttributePoints, level = 1) {
     name: name,
     playerId: 'ai',
     attributes,
-    stats: statsWithEquipment,
+    stats,
     equipment,
     rotation,
     attackType,
