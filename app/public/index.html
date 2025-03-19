@@ -93,10 +93,6 @@
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="challenge-tab" data-bs-toggle="tab" data-bs-target="#challenge" type="button" role="tab" aria-controls="challenge" aria-selected="false">Challenge</button>
             </li>
-            
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="adventure-tab" data-bs-toggle="tab" data-bs-target="#adventure" type="button" role="tab" aria-controls="adventure" aria-selected="false">Adventure</button>
-            </li>
 <li class="nav-item" role="presentation">
   <button class="nav-link" id="shop-tab" data-bs-toggle="tab" data-bs-target="#shop" type="button" role="tab" aria-controls="shop" aria-selected="false">Shop</button>
 </li>            
@@ -274,87 +270,6 @@
     </div>
   </div>
 </div>
-</div>
-
-<!-- Adventure Tab -->
-<div class="tab-pane fade" id="adventure" role="tabpanel" aria-labelledby="adventure-tab">
-  <div id="adventure-section">
-    <!-- Start Adventure Section -->
-    <div id="start-adventure-section" class="card mb-4">
-      <div class="card-header">
-        <h5>Start a New Adventure</h5>
-      </div>
-      <div class="card-body">
-        <p>Send your character on an adventure to collect items, gold, and experience. Be careful - your character will face enemies and may not survive!</p>
-        <div class="mb-3">
-          <label for="adventure-duration" class="form-label">Adventure Duration (days)</label>
-          <select class="form-select" id="adventure-duration">
-            <option value="0.5">0.5 day (30 minutes)</option>
-            <option value="1">1 day (1 hour)</option>
-            <option value="1.5">1.5 days (90 minutes)</option>
-            <option value="2">2 days (2 hours)</option>
-            <option value="2.5">2.5 days (2.5 hours)</option>
-            <option value="3">3 days (3 hours)</option>
-            <option value="3.5">3.5 days (3.5 hours)</option>
-            <option value="4">4 days (4 hours)</option>
-            <option value="4.5">4.5 days (4.5 hours)</option>
-            <option value="5">5 days (5 hours)</option>
-          </select>
-          <div class="form-text">Each day represents 1 hour of real time.</div>
-        </div>
-        <button id="start-adventure-btn" class="btn btn-primary">Start Adventure</button>
-      </div>
-    </div>
-    
-    <!-- Active Adventure Section -->
-    <div id="active-adventure-section" class="card mb-4 d-none">
-      <div class="card-header">
-        <h5>Active Adventure</h5>
-      </div>
-      <div class="card-body">
-        <h6 id="adventure-timer" class="mb-3">Adventure in progress...</h6>
-        
-        <!-- Progress bar -->
-        <div class="progress mb-3">
-          <div id="adventure-progress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-        </div>
-        
-        <!-- Health bar -->
-        <h6>Character Health:</h6>
-        <div class="progress mb-3">
-          <div id="adventure-health-bar" class="progress-bar bg-success" role="progressbar" style="width: 100%">100%</div>
-        </div>
-        
-        <!-- Rewards -->
-        <h6>Rewards Collected:</h6>
-        <div id="adventure-rewards" class="mb-3 p-2 border rounded">
-          No rewards collected yet.
-        </div>
-        
-        <!-- Adventure Log -->
-        <h6>Adventure Log:</h6>
-        <div id="adventure-log" class="mt-3 custom-scrollbar" style="max-height: 400px; overflow-y: auto;">
-          <!-- Adventure events will be shown here -->
-          <div class="alert alert-info">No events yet. The adventure is just beginning...</div>
-        </div>
-        
-        <button id="claim-rewards-btn" class="btn btn-success mt-3 d-none">Claim Rewards</button>
-      </div>
-    </div>
-    
-    <!-- Completed Adventures Section -->
-    <div id="completed-adventure-section" class="card mb-4">
-      <div class="card-header">
-        <h5>Adventure History</h5>
-      </div>
-      <div class="card-body">
-        <div id="adventure-history-list">
-          <!-- Completed adventures will be listed here -->
-          <div class="alert alert-info">No completed adventures yet.</div>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 <!-- Inventory Tab -->
 <div class="tab-pane fade" id="inventory" role="tabpanel" aria-labelledby="inventory-tab">
@@ -704,7 +619,6 @@
 <script src="js/ui/matchmaking-ui.js"></script>
 <script src="js/ui/challenge-ui.js"></script> <!-- Make sure this is here -->
   <script src="js/ui/item-ui.js"></script> <!-- NEW LINE -->
-  <script src="js/ui/adventure-ui.js"></script>
 
 <!-- Controllers -->
 <script src="js/controllers/character-controller.js"></script>
@@ -713,7 +627,6 @@
 <script src="js/controllers/matchmaking-controller.js"></script>
 <script src="js/controllers/challenge-controller.js"></script> <!-- Make sure this is here -->
   <script src="js/controllers/item-controller.js"></script> <!-- NEW LINE -->
-  <script src="js/controllers/adventure-controller.js"></script>
 
 <!-- Authentication -->
 <script src="js/auth.js"></script>

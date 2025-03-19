@@ -6,7 +6,6 @@
     "slot": "mainHand",
     "twoHanded": true,
     "price": 0,
-    "rarity": "rare",
     "stats": {
       "strength": 3
     },
@@ -32,7 +31,6 @@
     "slot": "offHand",
     "twoHanded": false,
     "price": 0,
-    "rarity": "uncommon",
     "stats": {
       "agility": 2
     },
@@ -60,7 +58,6 @@
     "slot": "mainHand",
     "twoHanded": false,
     "price": 0,
-    "rarity": "uncommon",
     "stats": {
       "intellect": 2,
       "wisdom": 1
@@ -93,7 +90,6 @@
     "slot": "mainHand",
     "twoHanded": false,
     "price": 0,
-    "rarity": "rare",
     "stats": {
       "intellect": 3
     },
@@ -121,7 +117,6 @@
     "slot": "offHand",
     "twoHanded": false,
     "price": 0,
-    "rarity": "rare",
     "stats": {
       "strength": 1,
       "agility": 1
@@ -152,7 +147,6 @@
     "type": "armor",
     "slot": "head",
     "price": 0,
-    "rarity": "uncommon",
     "stats": {
       "intellect": 1,
       "spellCritChance": 4
@@ -165,7 +159,6 @@
     "type": "armor",
     "slot": "chest",
     "price": 0,
-    "rarity": "common",
     "stats": {
       "stamina": 2,
       "blockChance": 5
@@ -178,7 +171,6 @@
     "type": "armor",
     "slot": "legs",
     "price": 0,
-    "rarity": "common",
     "stats": {
       "attackSpeed": -5
     },
@@ -190,26 +182,10 @@
     "type": "armor",
     "slot": "head",
     "price": 0,
-    "rarity": "epic",
     "stats": {
       "wisdom": 3,
       "stamina": 1
     },
     "description": "A helm adorned with the symbol of a dragon."
-  },
-  {
-    "id": "legendary-crown-of-dominance",
-    "name": "Legendary Crown of Dominance",
-    "type": "armor",
-    "slot": "head",
-    "price": 0,
-    "rarity": "legendary",
-    "stats": {
-      "strength": 5,
-      "intellect": 5,
-      "stamina": 3,
-      "criticalChance": 10
-    },
-    "description": "A crown worn by the ancient kings, said to grant immense power to its wielder."
   }
 ]

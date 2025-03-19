@@ -5,9 +5,9 @@ class GameState {
   constructor() {
     this.reset();
   }
-/**
- * Reset state to initial values
- */
+  /**
+   * Reset state to initial values
+   */
 reset() {
   this.loggedIn = false;
   this.playerId = null;
@@ -21,7 +21,6 @@ reset() {
   this.challenge = null;
   this.items = [];
   this.inventory = null;
-  this.adventure = null;
 }
   /**
  * Set the items list
@@ -30,14 +29,6 @@ reset() {
 setItems(items) {
   this.items = items;
   window.EventBus.publish('items:loaded', items);
-}
-  /**
- * Set adventure data
- * @param {Object} adventureData - Adventure data
- */
-setAdventure(adventureData) {
-  this.adventure = adventureData;
-  window.EventBus.publish('adventure:updated', adventureData);
 }
 /**
  * Set the character's inventory
