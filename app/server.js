@@ -10,6 +10,7 @@ const battleRoutes = require('./routes/battles');
 const abilityRoutes = require('./routes/abilities');
 const challengeRoutes = require('./routes/challenges'); 
 const itemRoutes = require('./routes/items');
+const adventureRoutes = require('./routes/adventures');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const { ensureDataFiles } = require('./utils/data-utils');
@@ -29,7 +30,8 @@ app.use('/api/characters', characterRoutes);
 app.use('/api/battles', battleRoutes);
 app.use('/api/abilities', abilityRoutes);
 app.use('/api/challenges', challengeRoutes);
-app.use('/api/items', itemRoutes); 
+app.use('/api/items', itemRoutes);
+app.use('/api/adventures', adventureRoutes);
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ error: 'An internal server error occurred' });

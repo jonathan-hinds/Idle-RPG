@@ -50,7 +50,8 @@ _initUI() {
   window.BattleUI = new BattleUI();
   window.MatchmakingUI = new MatchmakingUI();
   window.ChallengeUI = new ChallengeUI();
-  window.ItemUI = new ItemUI(); 
+  window.ItemUI = new ItemUI();
+  window.AdventureUI = new AdventureUI();
 }
   /**
    * Initialize controllers
@@ -62,7 +63,8 @@ _initControllers() {
   window.BattleController = new BattleController();
   window.MatchmakingController = new MatchmakingController();
   window.ChallengeController = new ChallengeController();
-  window.ItemController = new ItemController(); 
+  window.ItemController = new ItemController();
+  window.AdventureController = new AdventureController();
 }
   /**
    * Check authentication status

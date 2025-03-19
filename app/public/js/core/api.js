@@ -335,4 +335,74 @@ async unequipItem(characterId, slot) {
     body: JSON.stringify({ characterId, slot })
   });
 }
+  /**
+ * Get adventure data for a character
+ * @param {string} characterId - Character ID
+ * @returns {Promise<Object>} Adventure data
+ */
+async getAdventure(characterId) {
+  return this._request(`/api/adventures/${characterId}`);
+}
+
+/**
+ * Start a new adventure
+ * @param {string} characterId - Character ID
+ * @param {number} duration - Adventure duration in days
+ * @returns {Promise<Object>} New adventure
+ */
+async startAdventure(characterId, duration) {
+  return this._request('/api/adventures', {
+    method: 'POST',
+    body: JSON.stringify({ characterId, duration })
+  });
+}
+
+/**
+ * Process a battle during an adventure
+ * @param {string} adventureId - Adventure ID
+ * @param {number} eventIndex - Event index
+ * @returns {Promise<Object>} Result with battle and updated adventure
+ */
+async processAdventureBattle(adventureId, eventIndex) {
+  return this._request(`/api/adventures/${adventureId}/battle/${eventIndex}`, {
+    method: 'POST'
+  });
+}
+
+/**
+ * Process an item discovery
+ * @param {string} adventureId - Adventure ID
+ * @param {number} eventIndex - Event index
+ * @returns {Promise<Object>} Updated adventure
+ */
+async processItemDiscovery(adventureId, eventIndex) {
+  return this._request(`/api/adventures/${adventureId}/item/${eventIndex}`, {
+    method: 'POST'
+  });
+}
+
+/**
+ * Complete an adventure
+ * @param {string} adventureId - Adventure ID
+ * @returns {Promise<Object>} Updated adventure
+ */
+async completeAdventure(adventureId) {
+  return this._request(`/api/adventures/${adventureId}/complete`, {
+    method: 'POST'
+  });
+}
+
+/**
+ * Claim adventure rewards
+ * @param {string} adventureId - Adventure ID
+ * @param {string} characterId - Character ID
+ * @returns {Promise<Object>} Result with claimed rewards
+ */
+async claimAdventureRewards(adventureId, characterId) {
+  return this._request(`/api/adventures/${adventureId}/claim`, {
+    method: 'POST',
+    body: JSON.stringify({ characterId })
+  });
+}
+  
 }
