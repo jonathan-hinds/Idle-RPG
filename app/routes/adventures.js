@@ -77,9 +77,11 @@ router.get('/active/:characterId', authCheck, (req, res) => {
     // Check adventure status
     const updatedAdventure = adventureService.updateAdventure(adventure.id, character);
     
+    // Include server timestamp to synchronize client calculations
     res.json({
       active: true,
       adventure: updatedAdventure,
+      serverTime: new Date().toISOString(), // Add server's current time
       remainingTimePercentage: adventureService.createAdventureSocketEvent(
         updatedAdventure, character, 'adventure_update'
       ).adventure.remainingTimePercentage,
@@ -160,6 +162,16 @@ router.post('/', authCheck, (req, res) => {
     }
     
     const adventure = adventureService.startAdventure(characterId, roundedDuration);
+    
+    // If we have a socket, emit adventure started event immediately
+    if (req.app.get('io')) {
+      const io = req.app.get('io');
+      const eventData = adventureService.createAdventureSocketEvent(
+        adventure, character, 'adventure_started'
+      );
+      io.emit(`adventure:${characterId}`, eventData);
+    }
+    
     res.json(adventure);
   } catch (error) {
     console.error('Error starting adventure:', error);

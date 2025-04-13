@@ -146,12 +146,14 @@ function startAdventure(characterId, duration) {
   
   // Current time as milliseconds since epoch
   const now = Date.now();
+  console.log("Current server time:", new Date(now).toISOString());
   
   // Calculate duration in milliseconds
   const durationMs = Math.floor(roundedDuration * config.day_length * 1000);
   
   // Calculate end time as milliseconds since epoch
   const endTimeMs = now + durationMs;
+  console.log("Calculated end time:", new Date(endTimeMs).toISOString());
   
   // Calculate when the next event should occur
   const nextEventDelayMs = randomInt(
@@ -177,6 +179,10 @@ function startAdventure(characterId, duration) {
     nextEventTime: new Date(nextEventTimeMs).toISOString(),
     createdAt: new Date(now).toISOString()
   };
+  
+  console.log("Adventure created with start:", adventure.startTime);
+  console.log("Adventure created with end:", adventure.endTime);
+  console.log("Adventure duration:", adventure.duration, "days");
   
   // Add to adventures array
   adventures.push(adventure);
@@ -596,7 +602,6 @@ function abandonAdventure(adventureId) {
   return adventure;
 }
 
-// Create an adventure-related WebSocket event
 function createAdventureSocketEvent(adventure, character, eventType) {
   // Get elapsed and total time
   const now = new Date();

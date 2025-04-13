@@ -111,10 +111,6 @@ class AdventureController {
      * Update the adventure status UI
      * @param {Object} adventureStatus - Current adventure status
      */
-  /**
-   * Update the adventure status UI
-   * @param {Object} adventureStatus - Current adventure status
-   */
   updateAdventureStatus(adventureStatus) {
     if (!adventureStatus) return;
     
@@ -125,54 +121,7 @@ class AdventureController {
     const adventureTimeRemaining = document.getElementById('adventure-time-remaining');
     const adventureEndTime = document.getElementById('adventure-end-time');
     
-    if (adventureStatus.isCompleted === false) {
-      // Adventure is in progress
-      if (adventureStartSection) {
-        adventureStartSection.classList.add('d-none');
-      }
-      
-      if (adventureInProgressSection) {
-        adventureInProgressSection.classList.remove('d-none');
-        
-        // Set adventure details
-        document.getElementById('adventure-duration-display').textContent = `${adventureStatus.duration} days`;
-        
-        // Calculate remaining time using server values
-        const endTime = new Date(adventureStatus.endTime);
-        const startTime = new Date(adventureStatus.startTime);
-        const now = new Date();
-        const totalDurationMs = endTime - startTime;
-        const elapsedMs = Math.max(0, now - startTime);
-        const remainingMs = Math.max(0, endTime - now);
-        
-        // FIX: Calculate progress correctly
-        const progressPercent = Math.min(100, Math.max(0, Math.floor((elapsedMs / totalDurationMs) * 100)));
-        
-        // Update progress bar - reset to correct value
-        if (adventureProgressBar) {
-          adventureProgressBar.style.width = `${progressPercent}%`;
-          adventureProgressBar.setAttribute('aria-valuenow', progressPercent);
-        }
-        
-        // Update time remaining - ensure correct format
-        if (adventureTimeRemaining) {
-          if (remainingMs <= 0) {
-            adventureTimeRemaining.textContent = 'Complete!';
-            this.checkAdventureCompletion();
-          } else {
-            adventureTimeRemaining.textContent = this.formatTimeRemaining(remainingMs);
-          }
-        }
-        
-        // Set end time display
-        if (adventureEndTime) {
-          adventureEndTime.textContent = endTime.toLocaleString();
-        }
-        
-        // Start the timer to update the UI
-        this.startAdventureTimer(adventureStatus);
-      }
-    } else {
+    if (adventureStatus.active === false) {
       // No active adventure or adventure completed
       if (adventureStartSection) {
         adventureStartSection.classList.remove('d-none');
@@ -181,6 +130,74 @@ class AdventureController {
       if (adventureInProgressSection) {
         adventureInProgressSection.classList.add('d-none');
       }
+      return;
+    }
+    
+    // Adventure is in progress
+    if (adventureStartSection) {
+      adventureStartSection.classList.add('d-none');
+    }
+    
+    if (adventureInProgressSection) {
+      adventureInProgressSection.classList.remove('d-none');
+      
+      const adventure = adventureStatus.adventure;
+      
+      // Set adventure details
+      document.getElementById('adventure-duration-display').textContent = `${adventure.duration} days`;
+      
+      // Calculate time difference between server and client for synchronization
+      const serverTime = new Date(adventureStatus.serverTime);
+      const clientTime = new Date();
+      const timeOffset = clientTime - serverTime; // Positive if client is ahead
+      
+      // Use server time to calculate elapsed/remaining time by adjusting client time
+      const startTime = new Date(adventure.startTime);
+      const endTime = new Date(adventure.endTime);
+      const adjustedNow = new Date(clientTime - timeOffset); // Adjust for client/server difference
+      const totalDurationMs = endTime - startTime;
+      const elapsedMs = Math.max(0, adjustedNow - startTime);
+      const remainingMs = Math.max(0, endTime - adjustedNow);
+      
+      // Calculate progress as remaining time percentage (starts at 100%, goes to 0%)
+      const remainingTimePercentage = Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
+      
+      // Debug information
+      console.log("Client: Updating adventure status (time-synchronized)");
+      console.log("  Server time:", serverTime.toISOString());
+      console.log("  Client time:", clientTime.toISOString());
+      console.log("  Time offset:", timeOffset, "ms");
+      console.log("  Adjusted client time:", adjustedNow.toISOString());
+      console.log("  Start time:", startTime.toISOString());
+      console.log("  End time:", endTime.toISOString());
+      console.log("  Total duration (ms):", totalDurationMs);
+      console.log("  Elapsed (ms):", elapsedMs);
+      console.log("  Remaining (ms):", remainingMs);
+      console.log("  Remaining percentage:", remainingTimePercentage + "%");
+      
+      // Update progress bar
+      if (adventureProgressBar) {
+        adventureProgressBar.style.width = `${remainingTimePercentage}%`;
+        adventureProgressBar.setAttribute('aria-valuenow', remainingTimePercentage);
+      }
+      
+      // Update time remaining display
+      if (adventureTimeRemaining) {
+        if (remainingMs <= 0) {
+          adventureTimeRemaining.textContent = 'Complete!';
+          this.checkAdventureCompletion();
+        } else {
+          adventureTimeRemaining.textContent = this.formatTimeRemaining(remainingMs);
+        }
+      }
+      
+      // Set end time display
+      if (adventureEndTime) {
+        adventureEndTime.textContent = endTime.toLocaleString();
+      }
+      
+      // Start the timer to update the UI, passing the time offset for consistent updates
+      this.startAdventureTimer(adventure, timeOffset);
     }
     
     // Update adventure log if it exists
@@ -210,22 +227,26 @@ class AdventureController {
    * Start timer to update adventure progress
    * @param {Object} adventureStatus - Current adventure status
    */
-  startAdventureTimer(adventureStatus) {
+  startAdventureTimer(adventure, timeOffset) {
     // Clear any existing timer
     if (this.adventureTimer) {
       clearInterval(this.adventureTimer);
     }
     
     // Get time values
-    const startTime = new Date(adventureStatus.startTime);
-    const endTime = new Date(adventureStatus.endTime);
+    const startTime = new Date(adventure.startTime);
+    const endTime = new Date(adventure.endTime);
     const totalDurationMs = endTime - startTime;
     
     // Set timer to update every second
     this.adventureTimer = setInterval(() => {
-      const now = new Date();
-      const elapsedMs = Math.max(0, now - startTime);
-      const remainingMs = Math.max(0, endTime - now);
+      const clientTime = new Date();
+      const adjustedNow = new Date(clientTime - timeOffset); // Adjust for client/server difference
+      const elapsedMs = Math.max(0, adjustedNow - startTime);
+      const remainingMs = Math.max(0, endTime - adjustedNow);
+      
+      // Calculate progress based on remaining time percentage
+      const remainingTimePercentage = Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
       
       // Update time remaining
       const timeRemainingElement = document.getElementById('adventure-time-remaining');
@@ -235,7 +256,6 @@ class AdventureController {
           this.checkAdventureCompletion();
           clearInterval(this.adventureTimer);
         } else {
-          // FIX: Format time correctly
           timeRemainingElement.textContent = this.formatTimeRemaining(remainingMs);
         }
       }
@@ -243,10 +263,8 @@ class AdventureController {
       // Update progress bar
       const progressBar = document.getElementById('adventure-progress-bar');
       if (progressBar) {
-        // FIX: Calculate progress correctly
-        const progressPercent = Math.min(100, Math.max(0, Math.floor((elapsedMs / totalDurationMs) * 100)));
-        progressBar.style.width = `${progressPercent}%`;
-        progressBar.setAttribute('aria-valuenow', progressPercent);
+        progressBar.style.width = `${remainingTimePercentage}%`;
+        progressBar.setAttribute('aria-valuenow', remainingTimePercentage);
       }
     }, 1000);
   }
