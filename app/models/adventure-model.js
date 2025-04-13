@@ -290,8 +290,20 @@ function getRemainingTimePercentage(adventure) {
 function getFormattedElapsedTime(adventure) {
   const now = new Date();
   const startTime = new Date(adventure.startTime);
+  const endTime = new Date(adventure.endTime);
   
   const elapsedMs = now - startTime;
+  const totalMs = endTime - startTime;
+  
+  // Debug logging of the raw time values
+  console.log(`Model: Computing elapsed time for adventure ${adventure.id}`);
+  console.log(`  Now: ${now.toISOString()}`);
+  console.log(`  Start: ${startTime.toISOString()}`);
+  console.log(`  End: ${endTime.toISOString()}`);
+  console.log(`  Elapsed ms: ${elapsedMs}`);
+  console.log(`  Total ms: ${totalMs}`);
+  
+  // Format the time correctly
   const seconds = Math.floor(elapsedMs / 1000) % 60;
   const minutes = Math.floor(elapsedMs / (1000 * 60)) % 60;
   const hours = Math.floor(elapsedMs / (1000 * 60 * 60));

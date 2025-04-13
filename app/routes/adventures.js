@@ -70,6 +70,7 @@ router.get('/active/:characterId', authCheck, (req, res) => {
     const adventure = adventureService.getCharacterAdventure(characterId);
     
     if (!adventure) {
+      // Return a valid response indicating no active adventure
       return res.json({ active: false });
     }
     

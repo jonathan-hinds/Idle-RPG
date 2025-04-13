@@ -47,32 +47,34 @@ class AdventureController {
     /**
      * Load adventure data for the selected character
      */
-    async loadAdventureData() {
-      if (!window.GameState.selectedCharacter) return;
+  async loadAdventureData() {
+    if (!window.GameState.selectedCharacter) return;
+    
+    try {
+      // Hide the "select character" message
+      this.elements.selectCharacterMessage.classList.add('d-none');
       
-      try {
-        // Hide the "select character" message
-        this.elements.selectCharacterMessage.classList.add('d-none');
-        
-        // Show adventure content
-        this.elements.adventureContent.classList.remove('d-none');
-        
-        // Update character name
-        if (this.elements.adventureCharacterName) {
-          this.elements.adventureCharacterName.textContent = window.GameState.selectedCharacter.name;
-        }
-        
-        // Load adventure status if needed
-        const adventureStatus = await window.API.getAdventureStatus(window.GameState.selectedCharacter.id);
-        this.updateAdventureStatus(adventureStatus);
-        
-        // Start checking for adventure updates
-        this.startAdventureChecks();
-      } catch (error) {
-        console.error('Error loading adventure data:', error);
-        window.Notification.error('Failed to load adventure data');
+      // Show adventure content
+      this.elements.adventureContent.classList.remove('d-none');
+      
+      // Update character name
+      if (this.elements.adventureCharacterName) {
+        this.elements.adventureCharacterName.textContent = window.GameState.selectedCharacter.name;
       }
+      
+      // Load adventure status if needed
+      const adventureStatus = await window.API.getActiveAdventure(window.GameState.selectedCharacter.id);
+      this.updateAdventureStatus(adventureStatus);
+      
+      // Start checking for adventure updates
+      this.startAdventureChecks();
+    } catch (error) {
+      console.error('Error loading adventure data:', error);
+      window.Notification.error('Failed to load adventure data');
+      // Show start adventure UI as fallback
+      this._showStartAdventure();
     }
+  }
   
     /**
      * Start an adventure for the selected character

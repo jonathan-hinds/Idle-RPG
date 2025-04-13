@@ -342,7 +342,7 @@ async startAdventure(characterId, duration) {
  * @returns {Promise<Object>} Adventure status
  */
 async getAdventureStatus(characterId) {
-  return this._request(`/api/adventures/${characterId}`);
+  return this._request(`/api/adventures/active/${characterId}`);
 }
   
   /**

@@ -598,12 +598,32 @@ function abandonAdventure(adventureId) {
 
 // Create an adventure-related WebSocket event
 function createAdventureSocketEvent(adventure, character, eventType) {
+  // Get elapsed and total time
+  const now = new Date();
+  const startTime = new Date(adventure.startTime);
+  const endTime = new Date(adventure.endTime);
+  const totalDurationMs = endTime - startTime;
+  const elapsedMs = Math.max(0, now - startTime);
+  const remainingMs = Math.max(0, endTime - now);
+  
+  // Calculate progress correctly
+  const remainingTimePercentage = Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
+  
+  // Debug logging
+  console.log(`Server: Adventure ${adventure.id}`);
+  console.log(`  Start: ${startTime.toISOString()}`);
+  console.log(`  End: ${endTime.toISOString()}`);
+  console.log(`  Total duration: ${totalDurationMs / 1000 / 60} minutes`);
+  console.log(`  Elapsed: ${elapsedMs / 1000 / 60} minutes`);
+  console.log(`  Remaining: ${remainingMs / 1000 / 60} minutes`);
+  console.log(`  Remaining percentage: ${remainingTimePercentage}%`);
+  
   return {
     type: eventType,
     adventure: {
       id: adventure.id,
       status: adventure.status,
-      remainingTimePercentage: adventureModel.getRemainingTimePercentage(adventure),
+      remainingTimePercentage: remainingTimePercentage,
       formattedElapsedTime: adventureModel.getFormattedElapsedTime(adventure),
       currentHealth: adventure.currentHealth,
       maxHealth: adventure.maxHealth,
