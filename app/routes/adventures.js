@@ -55,6 +55,10 @@ router.get('/character/:characterId', authCheck, (req, res) => {
  * Get active adventure for a character
  * GET /api/adventures/active/:characterId
  */
+/**
+ * Get active adventure for a character
+ * GET /api/adventures/active/:characterId
+ */
 router.get('/active/:characterId', authCheck, (req, res) => {
   try {
     const characterId = req.params.characterId;
@@ -67,22 +71,60 @@ router.get('/active/:characterId', authCheck, (req, res) => {
       return res.status(404).json({ error: 'Character not found' });
     }
     
-    const adventure = adventureService.getCharacterAdventure(characterId);
+    // Find any adventure for this character
+    const adventures = readDataFile('adventures.json');
+    
+    // Find the active adventure - checking both status field and isCompleted for compatibility
+    const adventure = adventures.find(adv => 
+      adv.characterId === characterId && 
+      ((adv.status === 'active' || adv.status === undefined) && 
+       (adv.isCompleted === false || adv.isCompleted === undefined))
+    );
     
     if (!adventure) {
-      return res.json({ active: false });
+      return res.json({ 
+        active: false,
+        serverTime: new Date().toISOString()
+      });
     }
     
-    // Check adventure status
-    const updatedAdventure = adventureService.updateAdventure(adventure.id, character);
+    // Check if the adventure has ended based on time
+    const now = new Date();
+    const endTime = new Date(adventure.endTime);
+    const isExpired = now >= endTime;
     
-    // Get timing data
-    const timingData = adventureService.getAdventureTimingData(updatedAdventure);
+    if (isExpired) {
+      // Adventure has ended by time, mark it as inactive
+      return res.json({
+        active: false,
+        serverTime: now.toISOString()
+      });
+    }
     
+    // Adventure is still active
+    // Calculate timing information
+    const startTime = new Date(adventure.startTime);
+    const totalDurationMs = endTime - startTime;
+    const elapsedMs = Math.max(0, now - startTime);
+    const remainingMs = Math.max(0, endTime - now);
+    
+    // Calculate percentage remaining (100% to 0%)
+    const remainingTimePercentage = Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
+    
+    // Return the adventure with active: true
     res.json({
       active: true,
-      adventure: updatedAdventure,
-      timing: timingData
+      adventure: adventure,
+      serverTime: now.toISOString(),
+      remainingTimePercentage: remainingTimePercentage,
+      timing: {
+        currentServerTime: now.toISOString(),
+        totalDurationMs,
+        elapsedMs,
+        remainingMs,
+        remainingTimePercentage,
+        isCompleted: false
+      }
     });
   } catch (error) {
     console.error('Error getting active adventure:', error);
@@ -158,22 +200,43 @@ router.post('/', authCheck, (req, res) => {
     
     const adventure = adventureService.startAdventure(characterId, roundedDuration);
     
-    // Return the same structure that the GET endpoint returns for consistency
-    // This is the crucial fix - include all the same data the GET endpoint would
+    // Get current server time
+    const now = new Date();
+    const startTime = new Date(adventure.startTime);
+    const endTime = new Date(adventure.endTime);
+    
+    // Calculate duration properties
+    const totalDurationMs = endTime - startTime;
+    const elapsedMs = Math.max(0, now - startTime);
+    const remainingMs = Math.max(0, endTime - now);
+    
+    // Return response in same format as GET endpoint for consistency
     res.json({
       active: true,
       adventure: adventure,
-      serverTime: new Date().toISOString(),
+      serverTime: now.toISOString(),
       remainingTimePercentage: 100, // Just started, so 100% remaining
-      formattedElapsedTime: "00:00:00" // Just started, so 0 elapsed time
+      timing: {
+        currentServerTime: now.toISOString(),
+        totalDurationMs,
+        elapsedMs,
+        remainingMs,
+        remainingTimePercentage: 100,
+        isCompleted: false
+      }
     });
     
-    // If we have a socket, emit adventure started event immediately (this stays the same)
+    // If we have a socket, emit adventure started event
     if (req.app.get('io')) {
       const io = req.app.get('io');
-      const eventData = adventureService.createAdventureSocketEvent(
-        adventure, character, 'adventure_started'
-      );
+      const eventData = adventureService.createAdventureSocketEvent ?
+        adventureService.createAdventureSocketEvent(adventure, character, 'adventure_started') :
+        { 
+          type: 'adventure_started',
+          adventure: adventure,
+          character: { id: character.id, name: character.name }
+        };
+        
       io.emit(`adventure:${characterId}`, eventData);
     }
   } catch (error) {
@@ -211,9 +274,14 @@ router.put('/:id', authCheck, (req, res) => {
     // If we have a socket, emit adventure update event
     if (req.app.get('io')) {
       const io = req.app.get('io');
-      const eventData = adventureService.createAdventureSocketEvent(
-        updatedAdventure, character, 'adventure_update'
-      );
+      const eventData = adventureService.createAdventureSocketEvent ?
+        adventureService.createAdventureSocketEvent(updatedAdventure, character, 'adventure_update') :
+        {
+          type: 'adventure_update',
+          adventure: updatedAdventure,
+          character: { id: character.id, name: character.name }
+        };
+        
       io.emit(`adventure:${character.id}`, eventData);
     }
     
@@ -253,9 +321,14 @@ router.post('/:id/collect', authCheck, (req, res) => {
     // If we have a socket, emit adventure completed event
     if (req.app.get('io')) {
       const io = req.app.get('io');
-      const eventData = adventureService.createAdventureSocketEvent(
-        result.adventure, result.character, 'adventure_completed'
-      );
+      const eventData = adventureService.createAdventureSocketEvent ?
+        adventureService.createAdventureSocketEvent(result.adventure, result.character, 'adventure_completed') :
+        {
+          type: 'adventure_completed',
+          adventure: result.adventure, 
+          character: { id: character.id, name: character.name }
+        };
+        
       io.emit(`adventure:${character.id}`, eventData);
     }
     
@@ -295,9 +368,14 @@ router.post('/:id/abandon', authCheck, (req, res) => {
     // If we have a socket, emit adventure abandoned event
     if (req.app.get('io')) {
       const io = req.app.get('io');
-      const eventData = adventureService.createAdventureSocketEvent(
-        updatedAdventure, character, 'adventure_abandoned'
-      );
+      const eventData = adventureService.createAdventureSocketEvent ?
+        adventureService.createAdventureSocketEvent(updatedAdventure, character, 'adventure_abandoned') :
+        {
+          type: 'adventure_abandoned',
+          adventure: updatedAdventure,
+          character: { id: character.id, name: character.name }
+        };
+        
       io.emit(`adventure:${character.id}`, eventData);
     }
     
