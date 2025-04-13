@@ -273,7 +273,7 @@ async startChallengeBattle(characterId) {
       method: 'POST'
     });
   }
-  /**
+/**
    * Continue a challenge
    * @param {string} challengeId - Challenge ID
    * @returns {Promise<Object>} Updated challenge data
@@ -282,7 +282,88 @@ async startChallengeBattle(characterId) {
     return this._request(`/api/challenges/${challengeId}/continue`, {
       method: 'POST'
     });
-  } 
+  }
+  
+  /**
+   * Get adventure configuration
+   * @returns {Promise<Object>} Adventure configuration
+   */
+  async getAdventureConfig() {
+    return this._request('/api/adventures/config');
+  }
+  
+  /**
+   * Get all adventures for a character
+   * @param {string} characterId - Character ID
+   * @returns {Promise<Array>} List of character adventures
+   */
+  async getAdventureHistory(characterId) {
+    return this._request(`/api/adventures/character/${characterId}`);
+  }
+  
+  /**
+   * Get active adventure for a character
+   * @param {string} characterId - Character ID
+   * @returns {Promise<Object>} Active adventure or empty object
+   */
+  async getActiveAdventure(characterId) {
+    return this._request(`/api/adventures/active/${characterId}`);
+  }
+  
+  /**
+   * Get specific adventure by ID
+   * @param {string} adventureId - Adventure ID
+   * @returns {Promise<Object>} Adventure data
+   */
+  async getAdventure(adventureId) {
+    return this._request(`/api/adventures/${adventureId}`);
+  }
+  
+  /**
+   * Start a new adventure
+   * @param {string} characterId - Character ID
+   * @param {number} duration - Adventure duration in days
+   * @returns {Promise<Object>} New adventure
+   */
+  async startAdventure(characterId, duration) {
+    return this._request('/api/adventures', {
+      method: 'POST',
+      body: JSON.stringify({ characterId, duration })
+    });
+  }
+  
+  /**
+   * Update adventure (process events)
+   * @param {string} adventureId - Adventure ID
+   * @returns {Promise<Object>} Updated adventure
+   */
+  async updateAdventure(adventureId) {
+    return this._request(`/api/adventures/${adventureId}`, {
+      method: 'PUT'
+    });
+  }
+  
+  /**
+   * Collect adventure rewards
+   * @param {string} adventureId - Adventure ID
+   * @returns {Promise<Object>} Result with rewards
+   */
+  async collectAdventureRewards(adventureId) {
+    return this._request(`/api/adventures/${adventureId}/collect`, {
+      method: 'POST'
+    });
+  }
+  
+  /**
+   * Abandon adventure
+   * @param {string} adventureId - Adventure ID
+   * @returns {Promise<Object>} Updated adventure
+   */
+  async abandonAdventure(adventureId) {
+    return this._request(`/api/adventures/${adventureId}/abandon`, {
+      method: 'POST'
+    });
+  }
   /**
  * Get all items
  * @returns {Promise<Array>} List of items

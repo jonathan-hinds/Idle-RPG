@@ -1,6 +1,78 @@
 const { readDataFile, writeDataFile } = require('../utils/data-utils');
 const itemModel = require('../models/item-model');
 let itemCache = null;
+let isItemsCacheRarityReady = false;
+/**
+ * Ensure all items have a rarity property
+ * @returns {Array} Updated items array
+ */
+function ensureItemsHaveRarity() {
+  if (isItemsCacheRarityReady) return itemCache;
+  
+  const items = loadItems();
+  let modified = false;
+  
+  const rarities = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
+  
+  items.forEach(item => {
+    if (!item.rarity) {
+      // Assign a rarity based on item stats or effects
+      let rarityScore = 1; // Default: Common
+      
+      // Stats increase rarity
+      if (item.stats) {
+        const statSum = Object.values(item.stats).reduce((sum, val) => sum + Math.abs(val), 0);
+        rarityScore += Math.floor(statSum / 3);
+      }
+      
+      // Special effects increase rarity
+      if (item.effect) {
+        rarityScore += 2;
+      }
+      
+      // Limit rarityScore to valid index
+      rarityScore = Math.min(rarityScore, rarities.length - 1);
+      
+      // Assign rarity
+      item.rarity = rarities[rarityScore];
+      modified = true;
+    }
+  });
+  
+  // Save modified items if needed
+  if (modified) {
+    writeDataFile('items.json', items);
+  }
+  
+  isItemsCacheRarityReady = true;
+  return items;
+}
+
+/**
+ * Get all items of a specific rarity
+ * @param {string} rarity - Item rarity (Common, Uncommon, Rare, Epic, Legendary)
+ * @returns {Array} Filtered items
+ */
+function getItemsByRarity(rarity) {
+  const items = ensureItemsHaveRarity();
+  return items.filter(item => item.rarity === rarity);
+}
+
+/**
+ * Get a random item of a specific rarity
+ * @param {string} rarity - Item rarity
+ * @returns {Object|null} Random item or null if none found
+ */
+function getRandomItemByRarity(rarity) {
+  const items = getItemsByRarity(rarity);
+  
+  if (items.length === 0) {
+    return null;
+  }
+  
+  const randomIndex = Math.floor(Math.random() * items.length);
+  return items[randomIndex];
+}
 /**
  * Load all items from data file
  * @returns {Array} Array of item objects
@@ -42,6 +114,7 @@ function getItemsBySlot(slot) {
  */
 function clearItemCache() {
   itemCache = null;
+  isItemsCacheRarityReady = false;
 }
 /**
  * Get character inventory
@@ -86,6 +159,43 @@ function addItemToInventory(characterId, itemId) {
   }
   inventory.items.push(itemId);
   writeDataFile('inventories.json', inventories);
+  return inventory;
+}
+/**
+ * Add multiple items to character's inventory
+ * @param {string} characterId - Character ID
+ * @param {Array} itemIds - Array of item IDs to add
+ * @returns {Object} Updated inventory
+ */
+function addItemsToInventory(characterId, itemIds) {
+  if (!itemIds || itemIds.length === 0) {
+    return getCharacterInventory(characterId);
+  }
+  
+  const inventories = readDataFile('inventories.json');
+  let inventory = inventories.find(inv => inv.characterId === characterId);
+  
+  if (!inventory) {
+    inventory = {
+      characterId,
+      items: [],
+      equipment: {}
+    };
+    inventories.push(inventory);
+  }
+  
+  // Validate all items first
+  for (const itemId of itemIds) {
+    const item = getItem(itemId);
+    if (!item) {
+      throw new Error(`Item not found: ${itemId}`);
+    }
+  }
+  
+  // Add all items
+  inventory.items.push(...itemIds);
+  writeDataFile('inventories.json', inventories);
+  
   return inventory;
 }
 /**
@@ -172,8 +282,12 @@ module.exports = {
   getItemsByType,
   getItemsBySlot,
   clearItemCache,
+  ensureItemsHaveRarity,
+  getItemsByRarity,
+  getRandomItemByRarity,
   getCharacterInventory,
   addItemToInventory,
+  addItemsToInventory,
   equipItem,
   unequipItem
 };

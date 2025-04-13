@@ -1,0 +1,15 @@
+{
+    "event_chances": {
+      "battle": 35,
+      "gold_find": 30,
+      "exp_gain": 15,
+      "item_find": 20
+    },
+    "item_rarity_chances": {
+      "Common": 60,
+      "Uncommon": 25,
+      "Rare": 10,
+      "Epic": 4,
+      "Legendary": 1
+    }
+  }

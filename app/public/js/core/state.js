@@ -21,6 +21,8 @@ reset() {
   this.challenge = null;
   this.items = [];
   this.inventory = null;
+  this.adventure = null;
+  this.adventures = [];
 }
   /**
  * Set the items list
@@ -161,12 +163,49 @@ updateCharacter(updatedCharacter) {
       window.EventBus.publish('challenge:updated', updatedChallenge);
     }
   }
-  /**
+/**
    * Set current active challenge
    * @param {Object} challenge - Current challenge
    */
   setActiveChallenge(challenge) {
     this.activeChallenge = challenge;
     window.EventBus.publish('challenge:active', challenge);
+  }
+  
+  /**
+   * Set active adventure
+   * @param {Object} adventure - Active adventure
+   */
+  setAdventure(adventure) {
+    this.adventure = adventure;
+    window.EventBus.publish('adventure:updated', adventure);
+  }
+  
+  /**
+   * Set adventure history
+   * @param {Array} adventures - List of adventures
+   */
+  setAdventures(adventures) {
+    this.adventures = adventures;
+    window.EventBus.publish('adventures:loaded', adventures);
+  }
+  
+  /**
+   * Update an adventure in the adventures list
+   * @param {Object} updatedAdventure - Updated adventure data
+   */
+  updateAdventure(updatedAdventure) {
+    const index = this.adventures.findIndex(a => a.id === updatedAdventure.id);
+    if (index !== -1) {
+      this.adventures[index] = updatedAdventure;
+    } else {
+      this.adventures.push(updatedAdventure);
+    }
+    
+    if (this.adventure && this.adventure.id === updatedAdventure.id) {
+      this.adventure = updatedAdventure;
+    }
+    
+    window.EventBus.publish('adventure:updated', updatedAdventure);
   }
 }

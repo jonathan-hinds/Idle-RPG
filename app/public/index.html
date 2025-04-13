@@ -95,7 +95,11 @@
             </li>
 <li class="nav-item" role="presentation">
   <button class="nav-link" id="shop-tab" data-bs-toggle="tab" data-bs-target="#shop" type="button" role="tab" aria-controls="shop" aria-selected="false">Shop</button>
-</li>            
+</li>
+            
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="adventure-tab" data-bs-toggle="tab" data-bs-target="#adventure" type="button" role="tab" aria-controls="adventure" aria-selected="false">Adventure</button>
+            </li>            
           </ul>
         </div>
         <div class="card-body">
@@ -369,7 +373,118 @@
       <li>Can you reach round 10? Round 20? How far can you go?</li>
     </ul>
   </div>
-</div>          
+</div>
+            <!-- Adventure Tab -->
+<div class="tab-pane fade" id="adventure" role="tabpanel" aria-labelledby="adventure-tab">
+  <div id="adventure-content">
+    <!-- No character selected state -->
+    <div id="adventure-no-character" class="alert alert-info">
+      <p>Please select a character to go on adventures.</p>
+    </div>
+    
+    <!-- Start adventure form -->
+    <div id="adventure-start" class="card mb-4 d-none">
+      <div class="card-header">
+        <h5>Start a New Adventure</h5>
+      </div>
+      <div class="card-body">
+        <p>Send your character on an adventure to find gold, items, and gain experience. Longer adventures yield better rewards but come with more risk.</p>
+        
+        <div class="mb-3">
+          <label for="adventure-duration" class="form-label">Adventure Duration (Days)</label>
+          <select class="form-select" id="adventure-duration">
+            <option value="0.5">0.5 Days</option>
+            <option value="1">1 Day</option>
+            <option value="1.5">1.5 Days</option>
+            <option value="2">2 Days</option>
+            <option value="2.5">2.5 Days</option>
+            <option value="3">3 Days</option>
+            <option value="3.5">3.5 Days</option>
+            <option value="4">4 Days</option>
+            <option value="4.5">4.5 Days</option>
+            <option value="5">5 Days</option>
+          </select>
+          <div class="form-text">
+            In real time: 1 day = 1 hour. Longer adventures yield more rewards but are more dangerous.
+          </div>
+        </div>
+        
+        <div class="d-grid gap-2">
+          <button id="start-adventure-btn" class="btn btn-primary">Start Adventure</button>
+        </div>
+        
+        <div class="alert alert-warning mt-3">
+          <p><strong>Note:</strong> While on an adventure, your character will not be available for battles or challenge mode.</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Active adventure -->
+    <div id="adventure-active" class="card mb-4 d-none">
+      <div class="card-header">
+        <h5>Adventure In Progress</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label">Adventure Progress</label>
+          <div class="progress mb-2" style="height: 25px;">
+            <div id="adventure-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+          </div>
+          <div class="text-center">
+            <small class="text-muted">Time Elapsed: <span id="adventure-elapsed-time">00:00:00</span></small>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Character Health</label>
+          <div class="progress mb-2" style="height: 25px;">
+            <div id="adventure-health-bar" class="progress-bar bg-danger" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%">100%</div>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <h5>Adventure Log</h5>
+          <div id="adventure-log" class="p-3 bg-light" style="height: 200px; overflow-y: auto; border-radius: 5px;">
+            <div class="text-center text-muted">Adventure in progress...</div>
+          </div>
+        </div>
+        
+        <div class="card mb-3">
+          <div class="card-header">
+            <h6>Rewards So Far</h6>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4 text-center">
+                <h6>Gold</h6>
+                <p class="h3"><span id="adventure-gold-reward">0</span></p>
+              </div>
+              <div class="col-md-4 text-center">
+                <h6>Experience</h6>
+                <p class="h3"><span id="adventure-exp-reward">0</span></p>
+              </div>
+              <div class="col-md-4 text-center">
+                <h6>Items</h6>
+                <p class="h3"><span id="adventure-item-reward">0</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="d-flex justify-content-between">
+          <button id="abandon-adventure-btn" class="btn btn-danger">Abandon Adventure</button>
+          <button id="collect-rewards-btn" class="btn btn-success d-none">Collect Rewards</button>
+        </div>
+      </div>
+    </div>
+    
+    <h4>Adventure History</h4>
+    <div id="adventure-history" class="mt-3">
+      <!-- Past adventures will be shown here -->
+      <p class="text-muted">No past adventures.</p>
+    </div>
+  </div>
+</div>
 <!-- Shop Tab -->
 <div class="tab-pane fade" id="shop" role="tabpanel" aria-labelledby="shop-tab">
   <h4>Item Shop</h4>
@@ -592,6 +707,7 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+   <script src="/socket.io/socket.io.js"></script>
   
 <!-- Core libraries -->
 <script src="js/core/utils.js"></script>
@@ -604,6 +720,7 @@
 <script src="js/models/character.js"></script>
 <script src="js/models/battle.js"></script>
   <script src="js/models/item.js"></script> <!-- NEW LINE -->
+    <script src="js/models/adventure-model.js"></script> <!-- NEW LINE -->
 
 <!-- Engine -->
 <script src="js/engine/combat-calculator.js"></script>
@@ -619,6 +736,7 @@
 <script src="js/ui/matchmaking-ui.js"></script>
 <script src="js/ui/challenge-ui.js"></script> <!-- Make sure this is here -->
   <script src="js/ui/item-ui.js"></script> <!-- NEW LINE -->
+  <script src="js/ui/adventure-ui.js"></script>
 
 <!-- Controllers -->
 <script src="js/controllers/character-controller.js"></script>
@@ -627,6 +745,8 @@
 <script src="js/controllers/matchmaking-controller.js"></script>
 <script src="js/controllers/challenge-controller.js"></script> <!-- Make sure this is here -->
   <script src="js/controllers/item-controller.js"></script> <!-- NEW LINE -->
+  <script src="js/controllers/adventure-controller.js"></script>
+  
 
 <!-- Authentication -->
 <script src="js/auth.js"></script>

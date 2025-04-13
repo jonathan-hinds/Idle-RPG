@@ -4,6 +4,8 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
+const socketIo = require('socket.io');
 const authRoutes = require('./routes/auth');
 const characterRoutes = require('./routes/characters');
 const battleRoutes = require('./routes/battles');
@@ -13,6 +15,7 @@ const itemRoutes = require('./routes/items');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const { ensureDataFiles } = require('./utils/data-utils');
+const adventureRoutes = require('./routes/adventures');
 ensureDataFiles();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -30,10 +33,30 @@ app.use('/api/battles', battleRoutes);
 app.use('/api/abilities', abilityRoutes);
 app.use('/api/challenges', challengeRoutes);
 app.use('/api/items', itemRoutes); 
+app.use('/api/adventures', adventureRoutes);
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ error: 'An internal server error occurred' });
 });
-app.listen(PORT, () => {
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Setup Socket.io
+const io = socketIo(server);
+
+// Set io instance in app for route access
+app.set('io', io);
+
+// Socket.io connection handler
+io.on('connection', (socket) => {
+  console.log('New client connected');
+  
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

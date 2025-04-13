@@ -598,3 +598,40 @@ header h1 {
   bottom: 0;           /* Align to bottom */
   width: fit-content;
 }
+
+/* Adventure styles */
+.adventure-log-entry {
+  padding: 5px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.adventure-log-entry .text-success {
+  color: #28a745 !important;
+}
+
+.adventure-log-entry .text-danger {
+  color: #dc3545 !important;
+}
+
+.adventure-log-entry .text-warning {
+  color: #ffc107 !important;
+}
+
+.adventure-log-entry .text-info {
+  color: #17a2b8 !important;
+}
+
+.adventure-log-entry .text-primary {
+  color: #007bff !important;
+}
+
+.adventure-history-card {
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.adventure-history-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}

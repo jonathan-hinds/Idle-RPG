@@ -568,6 +568,111 @@ function crossover(parent1, parent2, totalAttributePoints) {
     fitness: 0 
   };
 }
+
+/**
+ * Create a random opponent for adventure mode
+ * @param {string} name - Opponent name
+ * @param {number} totalAttributePoints - Total attribute points to distribute
+ * @param {number} round - Current difficulty round
+ * @returns {Object} Random opponent character
+ */
+function createRandomOpponent(name, totalAttributePoints, round = 1) {
+  const attributes = {
+    strength: 1,
+    agility: 1,
+    stamina: 1,
+    intellect: 1,
+    wisdom: 1
+  };
+  let remainingPoints = totalAttributePoints - 5;
+  const attributeKeys = Object.keys(attributes);
+  while (remainingPoints > 0) {
+    const randomAttr = attributeKeys[Math.floor(Math.random() * attributeKeys.length)];
+    attributes[randomAttr]++;
+    remainingPoints--;
+  }
+  
+  // Random equipment setup
+  const equipment = {};
+  const slots = ['head', 'chest', 'legs', 'mainHand', 'offHand'];
+  const allItems = require('../data/items.json');
+  
+  // Calculate how many slots to fill (the higher the round, the more likely to have more items)
+  const maxSlots = Math.min(slots.length, Math.floor(Math.random() * round) + 1);
+  const shuffledSlots = slots.sort(() => 0.5 - Math.random()).slice(0, maxSlots);
+  
+  shuffledSlots.forEach(slot => {
+    const validItems = allItems.filter(item => item.slot === slot);
+    if (validItems.length > 0) {
+      const randomItem = validItems[Math.floor(Math.random() * validItems.length)];
+      equipment[slot] = randomItem;
+    }
+  });
+  
+  // Calculate stats with equipment
+  const stats = calculateStats(attributes, equipment);
+  
+  const abilities = abilityService.loadAbilities();
+  const rotation = getRandomRotation(abilities, 3 + Math.floor(Math.random() * 3)); 
+  const attackType = Math.random() > 0.5 ? 'physical' : 'magic';
+  
+  return {
+    id: `npc-${uuidv4()}`,
+    name: name,
+    playerId: 'ai',
+    attributes,
+    stats,
+    equipment,
+    rotation,
+    attackType,
+    level: round,
+    isNPC: true
+  };
+}
+
+/**
+ * Generate opponent from genetic memory for adventure mode
+ * @param {string} name - Opponent name
+ * @param {Array} geneticMemory - Genetic memory data
+ * @param {Object} characterAttributes - Character attributes for reference
+ * @param {number} round - Current round
+ * @returns {Object} Evolved opponent
+ */
+function generateOpponent(name, geneticMemory, characterAttributes, round) {
+  // If no genetic memory, create random opponent
+  if (!geneticMemory || geneticMemory.length === 0) {
+    return createRandomOpponent(name, Object.values(characterAttributes).reduce((sum, val) => sum + val, 0), round);
+  }
+  
+  // Sort by fitness
+  const sortedMemory = [...geneticMemory].sort((a, b) => b.fitness - a.fitness);
+  
+  // Select parents using tournament selection
+  const parent1 = selectParent(sortedMemory);
+  const parent2 = selectParent(sortedMemory);
+  
+  // Crossover
+  const child = crossover(parent1, parent2, Object.values(characterAttributes).reduce((sum, val) => sum + val, 0));
+  
+  // Mutation
+  mutate(child, Object.values(characterAttributes).reduce((sum, val) => sum + val, 0));
+  
+  // Create opponent from genetic memory
+  const stats = calculateStats(child.attributes);
+  
+  return {
+    id: `npc-${uuidv4()}`,
+    name: name,
+    playerId: 'ai',
+    attributes: child.attributes,
+    stats,
+    equipment: child.equipment || {},
+    rotation: child.rotation || [],
+    attackType: child.attackType || 'physical',
+    level: round,
+    isNPC: true
+  };
+}
 /**
  * Mutate a genetic memory entry
  * @param {Object} memory - Genetic memory entry
@@ -724,5 +829,7 @@ module.exports = {
   createChallenge,
   startChallengeBattle,
   resetChallenge,
-  awardChallengeExp
+  awardChallengeExp,
+  createRandomOpponent,
+  generateOpponent
 };

@@ -18,7 +18,7 @@ class App {
     this.initialized = true;
     console.log('Application initialized');
   }
-  /**
+/**
    * Initialize core components
    */
   async _initCore() {
@@ -39,6 +39,23 @@ class App {
     } catch (error) {
       console.error('Failed to load abilities:', error);
     }
+    
+    // Initialize socket.io if available
+    if (window.io) {
+      try {
+        const socket = io();
+        window.socket = socket;
+        
+        // Once socket is ready, setup adventure socket
+        socket.on('connect', () => {
+          if (window.AdventureUI) {
+            window.AdventureUI.setupSocket(socket);
+          }
+        });
+      } catch (error) {
+        console.error('Failed to initialize socket.io:', error);
+      }
+    }
   }
   /**
    * Initialize UI components
@@ -50,7 +67,8 @@ _initUI() {
   window.BattleUI = new BattleUI();
   window.MatchmakingUI = new MatchmakingUI();
   window.ChallengeUI = new ChallengeUI();
-  window.ItemUI = new ItemUI(); 
+  window.ItemUI = new ItemUI();
+  window.AdventureUI = new AdventureUI();
 }
   /**
    * Initialize controllers

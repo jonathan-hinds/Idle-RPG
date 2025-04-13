@@ -188,7 +188,8 @@ function createBattleState(character) {
     cooldowns: {},
     periodicEffects: [],
     buffs: [],
-    nextAbilityIndex: 0
+    nextAbilityIndex: 0,
+    adventuring: false
   };
 }
 /**
