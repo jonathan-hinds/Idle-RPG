@@ -17,9 +17,36 @@ let eventsCache = null;
  * @returns {Object} Adventure configuration
  */
 function getAdventureConfig() {
-  if (configCache) return configCache;
-  configCache = readDataFile('adventure-config.json');
-  return configCache;
+  try {
+    // Try to read from config file
+    const configPath = path.join(__dirname, '..', 'data', 'adventure-config.json');
+    
+    if (fs.existsSync(configPath)) {
+      const configData = fs.readFileSync(configPath, 'utf8');
+      const config = JSON.parse(configData);
+      
+      // Validate the config has required properties
+      if (!config.day_length || !config.event_interval || 
+          !config.event_interval.min || !config.event_interval.max) {
+        throw new Error('Invalid config format');
+      }
+      
+      return config;
+    } else {
+      throw new Error('Config file not found');
+    }
+  } catch (error) {
+    console.log('Using default adventure config:', error.message);
+    
+    // Return default config if file doesn't exist or is invalid
+    return {
+      day_length: 3600, // 1 hour = 1 in-game day
+      event_interval: {
+        min: 300, // 5 minutes minimum between events
+        max: 900  // 15 minutes maximum between events
+      }
+    };
+  }
 }
 
 /**
@@ -78,41 +105,121 @@ function getCharacterAdventure(characterId) {
  * @param {number} duration - Adventure duration in days
  * @returns {Object} New adventure
  */
-function startAdventure(character, duration) {
-  // Check if character already has an active adventure
-  const existingAdventure = getCharacterAdventure(character.id);
-  if (existingAdventure) {
-    throw new Error('Character already has an active adventure');
+function startAdventure(characterId, duration) {
+  // Load adventures file
+  const adventures = readDataFile('adventures.json');
+  
+  // Check if character is already on an adventure
+  if (adventures.some(adv => adv.characterId === characterId && !adv.isCompleted)) {
+    throw new Error('Character is already on an adventure');
   }
   
+  // Validate and parse duration to ensure it's a number
+  const durationValue = parseFloat(duration);
+  
+  // Additional validation to be safe
+  if (isNaN(durationValue) || durationValue < 0.5 || durationValue > 5) {
+    throw new Error('Invalid duration. Must be between 0.5 and 5 days');
+  }
+  
+  // Round to nearest 0.5 increment to avoid floating point issues
+  const roundedDuration = Math.round(durationValue * 2) / 2;
+  
+  // Load config
   const config = getAdventureConfig();
-  const adventure = adventureModel.createAdventureState(character.id, duration);
+    // Debug logging
+  console.log("Adventure config:", config);
+  console.log("Duration days:", durationValue);
   
-  // Set character's current and max health
-  adventure.currentHealth = character.stats.health;
-  adventure.maxHealth = character.stats.health;
+  // Make sure day_length is exactly 3600 for 1 hour
+  const durationInDays = parseFloat(duration);
   
-  // Calculate end time
-  adventure.endTime = adventureModel.calculateEndTime(adventure, config).toISOString();
+  // This should be 3600 seconds for 1 hour per day
+  const dayLengthInSeconds = config.day_length || 3600;
+  console.log("Day length in seconds:", dayLengthInSeconds);
   
-  // Calculate next event time
-  adventure.nextEventTime = adventureModel.calculateNextEventTime(adventure, config).toISOString();
+  const durationInSeconds = durationInDays * dayLengthInSeconds;
+  console.log("Total duration in seconds:", durationInSeconds);
   
-  // Add initial event
-  adventureModel.recordEvent(
-    adventure, 
-    'adventure_start', 
-    `Started a ${duration}-day adventure!`, 
-    { duration }
+  const durationInMs = durationInSeconds * 1000;
+  console.log("Total duration in ms:", durationInMs);
+  
+  // Current time as milliseconds since epoch
+  const now = Date.now();
+  
+  // Calculate duration in milliseconds
+  const durationMs = Math.floor(roundedDuration * config.day_length * 1000);
+  
+  // Calculate end time as milliseconds since epoch
+  const endTimeMs = now + durationMs;
+  
+  // Calculate when the next event should occur
+  const nextEventDelayMs = randomInt(
+    config.event_interval.min * 1000, 
+    config.event_interval.max * 1000
   );
+  const nextEventTimeMs = now + nextEventDelayMs;
   
-  // Save to database
-  const adventures = loadAdventures();
+  // Create adventure object
+  const adventure = {
+    id: uuidv4(),
+    characterId,
+    startTime: new Date(now).toISOString(),
+    endTime: new Date(endTimeMs).toISOString(),
+    duration: roundedDuration,
+    isCompleted: false,
+    events: [],
+    rewards: {
+      experience: 0,
+      gold: 0,
+      items: []
+    },
+    nextEventTime: new Date(nextEventTimeMs).toISOString(),
+    createdAt: new Date(now).toISOString()
+  };
+  
+  // Add to adventures array
   adventures.push(adventure);
+  
+  // Save to file
   writeDataFile('adventures.json', adventures);
-  clearAdventureCache();
   
   return adventure;
+}
+
+function calculateNextEventTime(fromTime, config) {
+  // Convert fromTime to milliseconds since epoch
+  let fromTimeMs;
+  
+  if (fromTime instanceof Date) {
+    fromTimeMs = fromTime.getTime();
+  } else if (typeof fromTime === 'string') {
+    fromTimeMs = new Date(fromTime).getTime();
+  } else {
+    fromTimeMs = fromTime;
+  }
+  
+  // Validate to ensure we have a valid time
+  if (isNaN(fromTimeMs)) {
+    // Fallback to current time if invalid
+    fromTimeMs = Date.now();
+  }
+  
+  // Get random interval in milliseconds
+  const intervalMs = randomInt(
+    config.event_interval.min * 1000, 
+    config.event_interval.max * 1000
+  );
+  
+  // Calculate next event time
+  const nextEventTimeMs = fromTimeMs + intervalMs;
+  
+  // Return as ISO string
+  return new Date(nextEventTimeMs).toISOString();
+}
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 /**

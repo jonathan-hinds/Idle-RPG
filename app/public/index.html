@@ -375,113 +375,76 @@
   </div>
 </div>
             <!-- Adventure Tab -->
+<!-- In the Adventure tab content section -->
 <div class="tab-pane fade" id="adventure" role="tabpanel" aria-labelledby="adventure-tab">
-  <div id="adventure-content">
-    <!-- No character selected state -->
-    <div id="adventure-no-character" class="alert alert-info">
-      <p>Please select a character to go on adventures.</p>
-    </div>
+  <h4>Adventure Mode</h4>
+  
+  <!-- Message when no character is selected -->
+  <div id="adventure-select-character" class="alert alert-info">
+    Please select a character to go on adventures.
+  </div>
+  
+  <!-- Content shown when character is selected -->
+  <div id="adventure-content" class="d-none">
+    <h5>Character: <span id="adventure-character-name"></span></h5>
     
-    <!-- Start adventure form -->
-    <div id="adventure-start" class="card mb-4 d-none">
+    <!-- Adventure Controls (shown when no active adventure) -->
+    <div id="adventure-start-section" class="card mb-3">
       <div class="card-header">
         <h5>Start a New Adventure</h5>
       </div>
       <div class="card-body">
-        <p>Send your character on an adventure to find gold, items, and gain experience. Longer adventures yield better rewards but come with more risk.</p>
-        
         <div class="mb-3">
-          <label for="adventure-duration" class="form-label">Adventure Duration (Days)</label>
+          <label for="adventure-duration" class="form-label">Adventure Duration</label>
           <select class="form-select" id="adventure-duration">
-            <option value="0.5">0.5 Days</option>
-            <option value="1">1 Day</option>
-            <option value="1.5">1.5 Days</option>
-            <option value="2">2 Days</option>
-            <option value="2.5">2.5 Days</option>
-            <option value="3">3 Days</option>
-            <option value="3.5">3.5 Days</option>
-            <option value="4">4 Days</option>
-            <option value="4.5">4.5 Days</option>
-            <option value="5">5 Days</option>
+            <option value="0.5">0.5 days</option>
+            <option value="1" selected>1 day</option>
+            <option value="1.5">1.5 days</option>
+            <option value="2">2 days</option>
+            <option value="2.5">2.5 days</option>
+            <option value="3">3 days</option>
+            <option value="3.5">3.5 days</option>
+            <option value="4">4 days</option>
+            <option value="4.5">4.5 days</option>
+            <option value="5">5 days</option>
           </select>
-          <div class="form-text">
-            In real time: 1 day = 1 hour. Longer adventures yield more rewards but are more dangerous.
-          </div>
         </div>
-        
-        <div class="d-grid gap-2">
-          <button id="start-adventure-btn" class="btn btn-primary">Start Adventure</button>
-        </div>
-        
-        <div class="alert alert-warning mt-3">
-          <p><strong>Note:</strong> While on an adventure, your character will not be available for battles or challenge mode.</p>
-        </div>
+        <button id="start-adventure-btn" class="btn btn-primary">Start Adventure</button>
       </div>
     </div>
     
-    <!-- Active adventure -->
-    <div id="adventure-active" class="card mb-4 d-none">
+    <!-- Adventure Progress (shown when adventure is active) -->
+    <div id="adventure-in-progress" class="card mb-3 d-none">
       <div class="card-header">
-        <h5>Adventure In Progress</h5>
+        <h5>Adventure in Progress</h5>
       </div>
       <div class="card-body">
         <div class="mb-3">
-          <label class="form-label">Adventure Progress</label>
-          <div class="progress mb-2" style="height: 25px;">
-            <div id="adventure-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
-          </div>
-          <div class="text-center">
-            <small class="text-muted">Time Elapsed: <span id="adventure-elapsed-time">00:00:00</span></small>
-          </div>
+          <label>Duration: <span id="adventure-duration-display">-</span></label>
         </div>
-        
         <div class="mb-3">
-          <label class="form-label">Character Health</label>
-          <div class="progress mb-2" style="height: 25px;">
-            <div id="adventure-health-bar" class="progress-bar bg-danger" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%">100%</div>
-          </div>
+          <label>Time Remaining: <span id="adventure-time-remaining">-</span></label>
         </div>
-        
         <div class="mb-3">
-          <h5>Adventure Log</h5>
-          <div id="adventure-log" class="p-3 bg-light" style="height: 200px; overflow-y: auto; border-radius: 5px;">
-            <div class="text-center text-muted">Adventure in progress...</div>
-          </div>
+          <label>Adventure Ends: <span id="adventure-end-time">-</span></label>
         </div>
-        
-        <div class="card mb-3">
-          <div class="card-header">
-            <h6>Rewards So Far</h6>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-4 text-center">
-                <h6>Gold</h6>
-                <p class="h3"><span id="adventure-gold-reward">0</span></p>
-              </div>
-              <div class="col-md-4 text-center">
-                <h6>Experience</h6>
-                <p class="h3"><span id="adventure-exp-reward">0</span></p>
-              </div>
-              <div class="col-md-4 text-center">
-                <h6>Items</h6>
-                <p class="h3"><span id="adventure-item-reward">0</span></p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="d-flex justify-content-between">
-          <button id="abandon-adventure-btn" class="btn btn-danger">Abandon Adventure</button>
-          <button id="collect-rewards-btn" class="btn btn-success d-none">Collect Rewards</button>
+        <div class="progress mb-3">
+          <div id="adventure-progress-bar" class="progress-bar" role="progressbar" style="width: 0%" 
+               aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
         </div>
       </div>
     </div>
     
-    <h4>Adventure History</h4>
-    <div id="adventure-history" class="mt-3">
-      <!-- Past adventures will be shown here -->
-      <p class="text-muted">No past adventures.</p>
+    <!-- Adventure Log -->
+    <div class="card">
+      <div class="card-header">
+        <h5>Adventure Log</h5>
+      </div>
+      <div class="card-body">
+        <div id="adventure-log" class="p-3 bg-light" style="height: 300px; overflow-y: auto;">
+          <div class="alert alert-info">No events have occurred yet.</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

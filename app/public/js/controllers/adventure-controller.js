@@ -1,22 +1,23 @@
-/**
- * Adventure mode controller
- */
 class AdventureController {
     constructor() {
       this._initElements();
       this._initEventListeners();
+      this.adventureTimer = null;
+      this.adventureCheckInterval = null;
     }
   
     /**
-     * Initialize DOM elements
+     * Initialize UI elements
      */
     _initElements() {
       this.elements = {
         adventureTab: document.getElementById('adventure-tab'),
-        startAdventureBtn: document.getElementById('start-adventure-btn'),
-        adventureDuration: document.getElementById('adventure-duration'),
-        collectRewardsBtn: document.getElementById('collect-rewards-btn'),
-        abandonAdventureBtn: document.getElementById('abandon-adventure-btn')
+        adventureContent: document.getElementById('adventure-content'),
+        selectCharacterMessage: document.getElementById('adventure-select-character'),
+        adventureCharacterName: document.getElementById('adventure-character-name'),
+        adventureStartSection: document.getElementById('adventure-start-section'),
+        adventureInProgress: document.getElementById('adventure-in-progress'),
+        startAdventureBtn: document.getElementById('start-adventure-btn')
       };
     }
   
@@ -26,86 +27,78 @@ class AdventureController {
     _initEventListeners() {
       if (this.elements.adventureTab) {
         this.elements.adventureTab.addEventListener('shown.bs.tab', () => {
-          this.loadAdventureStatus();
-        });
-      }
-  
-      if (this.elements.startAdventureBtn) {
-        this.elements.startAdventureBtn.addEventListener('click', () => {
-          this.startAdventure();
+          if (window.GameState.selectedCharacter) {
+            this.loadAdventureData();
+          }
         });
       }
       
-      if (this.elements.collectRewardsBtn) {
-        this.elements.collectRewardsBtn.addEventListener('click', () => {
-          this.collectRewards();
-        });
-      }
-      
-      if (this.elements.abandonAdventureBtn) {
-        this.elements.abandonAdventureBtn.addEventListener('click', () => {
-          this.abandonAdventure();
-        });
-      }
-  
       window.EventBus.subscribe('character:selected', () => {
-        if (this.elements.adventureTab && this.elements.adventureTab.classList.contains('active')) {
-          this.loadAdventureStatus();
+        if (this.elements.adventureTab.classList.contains('active')) {
+          this.loadAdventureData();
         }
       });
-    }
-  
-    /**
-     * Load adventure status for the selected character
-     */
-    async loadAdventureStatus() {
-      if (!window.GameState.selectedCharacter) {
-        window.AdventureUI.showAdventureStatus(null);
-        return;
-      }
-  
-      try {
-        const adventureStatus = await window.API.getActiveAdventure(window.GameState.selectedCharacter.id);
-        window.AdventureUI.showAdventureStatus(adventureStatus);
-        this.loadAdventureHistory();
-      } catch (error) {
-        console.error('Error loading adventure status:', error);
-        window.Notification.error('Failed to load adventure status');
+      
+      if (this.elements.startAdventureBtn) {
+        this.elements.startAdventureBtn.addEventListener('click', () => this.startAdventure());
       }
     }
   
     /**
-     * Load adventure history for the selected character
+     * Load adventure data for the selected character
      */
-    async loadAdventureHistory() {
+    async loadAdventureData() {
       if (!window.GameState.selectedCharacter) return;
-  
+      
       try {
-        const adventureHistory = await window.API.getAdventureHistory(window.GameState.selectedCharacter.id);
-        window.AdventureUI.renderAdventureHistory(adventureHistory);
+        // Hide the "select character" message
+        this.elements.selectCharacterMessage.classList.add('d-none');
+        
+        // Show adventure content
+        this.elements.adventureContent.classList.remove('d-none');
+        
+        // Update character name
+        if (this.elements.adventureCharacterName) {
+          this.elements.adventureCharacterName.textContent = window.GameState.selectedCharacter.name;
+        }
+        
+        // Load adventure status if needed
+        const adventureStatus = await window.API.getAdventureStatus(window.GameState.selectedCharacter.id);
+        this.updateAdventureStatus(adventureStatus);
+        
+        // Start checking for adventure updates
+        this.startAdventureChecks();
       } catch (error) {
-        console.error('Error loading adventure history:', error);
-        window.Notification.error('Failed to load adventure history');
+        console.error('Error loading adventure data:', error);
+        window.Notification.error('Failed to load adventure data');
       }
     }
   
     /**
-     * Start a new adventure
+     * Start an adventure for the selected character
      */
     async startAdventure() {
       if (!window.GameState.selectedCharacter) return;
       
-      const duration = parseFloat(this.elements.adventureDuration.value);
-      
-      if (isNaN(duration) || duration < 0.5 || duration > 5) {
-        window.Notification.error('Please select a valid duration (0.5 to 5 days)');
-        return;
-      }
-  
       try {
-        const adventure = await window.API.startAdventure(window.GameState.selectedCharacter.id, duration);
-        window.AdventureUI.showActiveAdventure(adventure);
-        window.Notification.success('Adventure started!');
+        // Get duration value from dropdown
+        const durationElement = document.getElementById('adventure-duration');
+        if (!durationElement) {
+          window.Notification.error('Duration selection not found');
+          return;
+        }
+        
+        // Convert value to number
+        const duration = parseFloat(durationElement.value);
+        
+        if (isNaN(duration) || duration < 0.5 || duration > 5) {
+          window.Notification.error('Please select a valid duration between 0.5 and 5 days');
+          return;
+        }
+        
+        const result = await window.API.startAdventure(window.GameState.selectedCharacter.id, duration);
+        this.updateAdventureStatus(result);
+        window.Notification.success('Adventure started successfully!');
       } catch (error) {
         console.error('Error starting adventure:', error);
         window.Notification.error(error.message || 'Failed to start adventure');
@@ -113,66 +106,350 @@ class AdventureController {
     }
   
     /**
-     * Collect rewards from completed adventure
+     * Update the adventure status UI
+     * @param {Object} adventureStatus - Current adventure status
      */
-    async collectRewards() {
-      if (!window.GameState.selectedCharacter) return;
-  
-      try {
-        const activeAdventure = await window.API.getActiveAdventure(window.GameState.selectedCharacter.id);
+  /**
+   * Update the adventure status UI
+   * @param {Object} adventureStatus - Current adventure status
+   */
+  updateAdventureStatus(adventureStatus) {
+    if (!adventureStatus) return;
+    
+    // Get UI elements
+    const adventureInProgressSection = document.getElementById('adventure-in-progress');
+    const adventureStartSection = document.getElementById('adventure-start-section');
+    const adventureProgressBar = document.getElementById('adventure-progress-bar');
+    const adventureTimeRemaining = document.getElementById('adventure-time-remaining');
+    const adventureEndTime = document.getElementById('adventure-end-time');
+    
+    if (adventureStatus.isCompleted === false) {
+      // Adventure is in progress
+      if (adventureStartSection) {
+        adventureStartSection.classList.add('d-none');
+      }
+      
+      if (adventureInProgressSection) {
+        adventureInProgressSection.classList.remove('d-none');
         
-        if (!activeAdventure.active || (activeAdventure.adventure.status !== 'completed' && activeAdventure.adventure.status !== 'failed')) {
-          window.Notification.error('No completed adventure to collect rewards from');
-          return;
+        // Set adventure details
+        document.getElementById('adventure-duration-display').textContent = `${adventureStatus.duration} days`;
+        
+        // Calculate remaining time using server values
+        const endTime = new Date(adventureStatus.endTime);
+        const startTime = new Date(adventureStatus.startTime);
+        const now = new Date();
+        const totalDurationMs = endTime - startTime;
+        const elapsedMs = Math.max(0, now - startTime);
+        const remainingMs = Math.max(0, endTime - now);
+        
+        // FIX: Calculate progress correctly
+        const progressPercent = Math.min(100, Math.max(0, Math.floor((elapsedMs / totalDurationMs) * 100)));
+        
+        // Update progress bar - reset to correct value
+        if (adventureProgressBar) {
+          adventureProgressBar.style.width = `${progressPercent}%`;
+          adventureProgressBar.setAttribute('aria-valuenow', progressPercent);
         }
         
-        const result = await window.API.collectAdventureRewards(activeAdventure.adventure.id);
+        // Update time remaining - ensure correct format
+        if (adventureTimeRemaining) {
+          if (remainingMs <= 0) {
+            adventureTimeRemaining.textContent = 'Complete!';
+            this.checkAdventureCompletion();
+          } else {
+            adventureTimeRemaining.textContent = this.formatTimeRemaining(remainingMs);
+          }
+        }
         
-        // Update character
-        window.GameState.updateCharacter(result.character);
-        window.CharacterUI.renderCharacterDetails(result.character);
+        // Set end time display
+        if (adventureEndTime) {
+          adventureEndTime.textContent = endTime.toLocaleString();
+        }
         
-        // Refresh UI
-        this.loadAdventureStatus();
+        // Start the timer to update the UI
+        this.startAdventureTimer(adventureStatus);
+      }
+    } else {
+      // No active adventure or adventure completed
+      if (adventureStartSection) {
+        adventureStartSection.classList.remove('d-none');
+      }
+      
+      if (adventureInProgressSection) {
+        adventureInProgressSection.classList.add('d-none');
+      }
+    }
+    
+    // Update adventure log if it exists
+    this.updateAdventureLog(adventureStatus);
+  }
+  
+  /**
+   * Format milliseconds to a readable time string
+   * @param {number} ms - Milliseconds
+   * @returns {string} Formatted time string
+   */
+  formatTimeRemaining(ms) {
+    // Convert to seconds
+    let totalSeconds = Math.floor(ms / 1000);
+    
+    // Extract hours, minutes, seconds
+    const hours = Math.floor(totalSeconds / 3600);
+    totalSeconds %= 3600;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    
+    // Format as hh:mm:ss
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  
+  /**
+   * Start timer to update adventure progress
+   * @param {Object} adventureStatus - Current adventure status
+   */
+  startAdventureTimer(adventureStatus) {
+    // Clear any existing timer
+    if (this.adventureTimer) {
+      clearInterval(this.adventureTimer);
+    }
+    
+    // Get time values
+    const startTime = new Date(adventureStatus.startTime);
+    const endTime = new Date(adventureStatus.endTime);
+    const totalDurationMs = endTime - startTime;
+    
+    // Set timer to update every second
+    this.adventureTimer = setInterval(() => {
+      const now = new Date();
+      const elapsedMs = Math.max(0, now - startTime);
+      const remainingMs = Math.max(0, endTime - now);
+      
+      // Update time remaining
+      const timeRemainingElement = document.getElementById('adventure-time-remaining');
+      if (timeRemainingElement) {
+        if (remainingMs <= 0) {
+          timeRemainingElement.textContent = 'Complete!';
+          this.checkAdventureCompletion();
+          clearInterval(this.adventureTimer);
+        } else {
+          // FIX: Format time correctly
+          timeRemainingElement.textContent = this.formatTimeRemaining(remainingMs);
+        }
+      }
+      
+      // Update progress bar
+      const progressBar = document.getElementById('adventure-progress-bar');
+      if (progressBar) {
+        // FIX: Calculate progress correctly
+        const progressPercent = Math.min(100, Math.max(0, Math.floor((elapsedMs / totalDurationMs) * 100)));
+        progressBar.style.width = `${progressPercent}%`;
+        progressBar.setAttribute('aria-valuenow', progressPercent);
+      }
+    }, 1000);
+  }
+  
+    /**
+     * Format milliseconds to a readable time string
+     * @param {number} ms - Milliseconds
+     * @returns {string} Formatted time string
+     */
+    formatTimeRemaining(ms) {
+      // Convert to seconds
+      let seconds = Math.floor(ms / 1000);
+      
+      // Extract hours, minutes, seconds
+      const hours = Math.floor(seconds / 3600);
+      seconds %= 3600;
+      const minutes = Math.floor(seconds / 60);
+      seconds %= 60;
+      
+      // Format as hh:mm:ss
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+  
+    /**
+     * Start timer to update adventure progress
+     * @param {Object} adventureStatus - Current adventure status
+     */
+    startAdventureTimer(adventureStatus) {
+      // Clear any existing timer
+      if (this.adventureTimer) {
+        clearInterval(this.adventureTimer);
+      }
+      
+      // Set timer to update every second
+      this.adventureTimer = setInterval(() => {
+        const now = new Date();
+        const endTime = new Date(adventureStatus.endTime);
+        const remaining = endTime - now;
         
-        // Show notification
-        const rewardMessage = `Collected rewards: ${result.adventure.rewards.gold} gold, ${result.adventure.rewards.experience} exp, and ${result.adventure.rewards.items.length} items`;
-        window.Notification.success(rewardMessage);
+        // Update time remaining
+        const timeRemainingElement = document.getElementById('adventure-time-remaining');
+        if (timeRemainingElement) {
+          if (remaining <= 0) {
+            timeRemainingElement.textContent = 'Complete!';
+            this.checkAdventureCompletion();
+            clearInterval(this.adventureTimer);
+          } else {
+            timeRemainingElement.textContent = this.formatTimeRemaining(remaining);
+          }
+        }
         
+        // Update progress bar
+        const progressBar = document.getElementById('adventure-progress-bar');
+        if (progressBar) {
+          const totalDuration = new Date(adventureStatus.endTime) - new Date(adventureStatus.startTime);
+          const elapsed = now - new Date(adventureStatus.startTime);
+          const percentComplete = Math.min(100, Math.max(0, Math.floor((elapsed / totalDuration) * 100)));
+          progressBar.style.width = `${percentComplete}%`;
+          progressBar.setAttribute('aria-valuenow', percentComplete);
+        }
+      }, 1000);
+    }
+  
+    /**
+     * Start periodic checks for adventure updates
+     */
+    startAdventureChecks() {
+      // Clear any existing timer
+      if (this.adventureCheckInterval) {
+        clearInterval(this.adventureCheckInterval);
+      }
+      
+      // Check for updates every 30 seconds
+      this.adventureCheckInterval = setInterval(async () => {
+        if (!window.GameState.selectedCharacter) return;
+        
+        try {
+          const adventureStatus = await window.API.getAdventureStatus(window.GameState.selectedCharacter.id);
+          // Only update the log, don't reset the timer
+          this.updateAdventureLog(adventureStatus);
+        } catch (error) {
+          console.error('Error checking adventure status:', error);
+        }
+      }, 30000);
+    }
+  
+    /**
+     * Check if adventure is complete and update UI accordingly
+     */
+    async checkAdventureCompletion() {
+      if (!window.GameState.selectedCharacter) return;
+      
+      try {
+        const adventureStatus = await window.API.getAdventureStatus(window.GameState.selectedCharacter.id);
+        
+        if (adventureStatus && adventureStatus.isCompleted) {
+          // Adventure completed while we were checking
+          this.updateAdventureStatus(adventureStatus);
+          
+          // Show completion notification
+          window.Notification.success('Your adventure has completed!');
+          
+          // Clear the timer
+          if (this.adventureTimer) {
+            clearInterval(this.adventureTimer);
+            this.adventureTimer = null;
+          }
+        }
       } catch (error) {
-        console.error('Error collecting rewards:', error);
-        window.Notification.error(error.message || 'Failed to collect rewards');
+        console.error('Error checking adventure completion:', error);
       }
     }
   
     /**
-     * Abandon the current adventure
+     * Update adventure log display
+     * @param {Object} adventureStatus - Current adventure status
      */
-    async abandonAdventure() {
-      if (!window.GameState.selectedCharacter) return;
-  
-      if (!confirm('Are you sure you want to abandon this adventure? You will lose all rewards.')) {
+    updateAdventureLog(adventureStatus) {
+      const logContainer = document.getElementById('adventure-log');
+      if (!logContainer || !adventureStatus || !adventureStatus.events) return;
+      
+      // Clear existing log
+      logContainer.innerHTML = '';
+      
+      if (adventureStatus.events.length === 0) {
+        logContainer.innerHTML = '<div class="alert alert-info">No events have occurred yet.</div>';
         return;
       }
+      
+      // Sort events by time
+      const sortedEvents = [...adventureStatus.events].sort((a, b) => {
+        return new Date(a.time) - new Date(b.time);
+      });
+      
+      // Create log entries
+      sortedEvents.forEach(event => {
+        const eventElement = document.createElement('div');
+        eventElement.className = 'adventure-log-entry mb-2 p-2 border-bottom';
+        
+        const timeStamp = new Date(event.time).toLocaleString();
+        eventElement.innerHTML = `
+          <div class="adventure-log-time small text-muted">${timeStamp}</div>
+          <div class="adventure-log-message">${this.formatEventMessage(event)}</div>
+        `;
+        
+        logContainer.appendChild(eventElement);
+      });
+      
+      // Scroll to the bottom to show the latest events
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
   
-      try {
-        const activeAdventure = await window.API.getActiveAdventure(window.GameState.selectedCharacter.id);
+    /**
+     * Format event message for display
+     * @param {Object} event - Adventure event
+     * @returns {string} Formatted event message
+     */
+    formatEventMessage(event) {
+      switch (event.type) {
+        case 'battle':
+          return `<strong class="${event.result === 'win' ? 'text-success' : 'text-danger'}">Battle: ${event.result === 'win' ? 'Victory!' : 'Defeat!'}</strong> ${event.description || ''}`;
         
-        if (!activeAdventure.active) {
-          window.Notification.error('No active adventure to abandon');
-          return;
-        }
-        
-        await window.API.abandonAdventure(activeAdventure.adventure.id);
-        
-        // Refresh UI
-        this.loadAdventureStatus();
-        
-        window.Notification.info('Adventure abandoned');
-        
-      } catch (error) {
-        console.error('Error abandoning adventure:', error);
-        window.Notification.error(error.message || 'Failed to abandon adventure');
+        case 'gold':
+          return `<strong class="text-warning">Found ${event.amount} gold!</strong> ${event.description || ''}`;
+          
+        case 'experience':
+          return `<strong class="text-primary">Gained ${event.amount} experience!</strong> ${event.description || ''}`;
+          
+        case 'item':
+          const rarityClass = this._getRarityClass(event.rarity);
+          return `<strong class="${rarityClass}">Found item: ${event.itemName} (${event.rarity})!</strong> ${event.description || ''}`;
+          
+        case 'heal':
+          return `<strong class="text-success">Healed for ${event.amount} health.</strong> ${event.description || ''}`;
+          
+        default:
+          return event.description || 'Unknown event occurred';
+      }
+    }
+  
+    /**
+     * Get CSS class for item rarity
+     * @param {string} rarity - Item rarity
+     * @returns {string} CSS class
+     */
+    _getRarityClass(rarity) {
+      switch (rarity?.toLowerCase()) {
+        case 'common': return 'text-secondary';
+        case 'uncommon': return 'text-success';
+        case 'rare': return 'text-primary';
+        case 'epic': return 'text-purple';
+        case 'legendary': return 'text-warning';
+        default: return 'text-muted';
+      }
+    }
+  
+    /**
+     * Clean up when component is destroyed
+     */
+    destroy() {
+      if (this.adventureTimer) {
+        clearInterval(this.adventureTimer);
+      }
+      if (this.adventureCheckInterval) {
+        clearInterval(this.adventureCheckInterval);
       }
     }
   }

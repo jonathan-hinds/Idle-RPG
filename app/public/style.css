@@ -635,3 +635,25 @@ header h1 {
   transform: translateY(-3px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
+
+/* Adventure mode styles */
+.adventure-log-entry {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.adventure-log-entry:last-child {
+  border-bottom: none;
+}
+
+.adventure-log-time {
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+/* Rarity colors */
+.text-purple {
+  color: #9c27b0;
+}

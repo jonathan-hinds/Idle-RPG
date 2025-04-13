@@ -325,12 +325,25 @@ async startChallengeBattle(characterId) {
    * @param {number} duration - Adventure duration in days
    * @returns {Promise<Object>} New adventure
    */
-  async startAdventure(characterId, duration) {
-    return this._request('/api/adventures', {
-      method: 'POST',
-      body: JSON.stringify({ characterId, duration })
-    });
-  }
+async startAdventure(characterId, duration) {
+  // Ensure duration is passed as a number
+  return this._request('/api/adventures', {  // Updated route from '/api/adventures/start' to '/api/adventures'
+    method: 'POST',
+    body: JSON.stringify({ 
+      characterId, 
+      duration: parseFloat(duration) // Ensure it's a number
+    })
+  });
+}
+  
+  /**
+ * Get the status of a character's adventure
+ * @param {string} characterId - Character ID
+ * @returns {Promise<Object>} Adventure status
+ */
+async getAdventureStatus(characterId) {
+  return this._request(`/api/adventures/${characterId}`);
+}
   
   /**
    * Update adventure (process events)

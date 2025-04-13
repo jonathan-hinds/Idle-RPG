@@ -80,7 +80,8 @@ _initControllers() {
   window.BattleController = new BattleController();
   window.MatchmakingController = new MatchmakingController();
   window.ChallengeController = new ChallengeController();
-  window.ItemController = new ItemController(); 
+  window.ItemController = new ItemController();
+  window.AdventureController = new AdventureController(); // Ensure this is here
 }
   /**
    * Check authentication status

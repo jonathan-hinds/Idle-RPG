@@ -133,44 +133,33 @@ router.post('/', authCheck, (req, res) => {
   try {
     const { characterId, duration } = req.body;
     
-    if (!characterId || !duration) {
-      return res.status(400).json({ error: 'Character ID and duration are required' });
+    if (!characterId) {
+      return res.status(400).json({ error: 'Character ID is required' });
     }
     
-    // Validate duration (0.5 to 5 days in 0.5 increments)
-    if (duration < 0.5 || duration > 5 || (duration * 10) % 5 !== 0) {
-      return res.status(400).json({ error: 'Duration must be between 0.5 and 5 days in 0.5 day increments' });
+    // Validate and parse duration
+    const durationValue = parseFloat(duration);
+    
+    if (isNaN(durationValue)) {
+      return res.status(400).json({ error: 'Duration must be a number' });
     }
     
-    // Get character
+    if (durationValue < 0.5 || durationValue > 5) {
+      return res.status(400).json({ error: 'Duration must be between 0.5 and 5 days' });
+    }
+    
+    // Round to nearest 0.5 increment
+    const roundedDuration = Math.round(durationValue * 2) / 2;
+    
     const characters = readDataFile('characters.json');
-    const character = characters.find(
-      c => c.id === characterId && c.playerId === req.session.playerId
-    );
+    const character = characters.find(c => c.id === characterId && c.playerId === req.session.playerId);
     
     if (!character) {
       return res.status(404).json({ error: 'Character not found' });
     }
     
-    // Check if character already has an active adventure
-    const existingAdventure = adventureService.getCharacterAdventure(characterId);
-    if (existingAdventure) {
-      return res.status(400).json({ error: 'Character already has an active adventure' });
-    }
-    
-    // Start adventure
-    const adventure = adventureService.startAdventure(character, duration);
-    
-    // If we have a socket, emit adventure started event
-    if (req.app.get('io')) {
-      const io = req.app.get('io');
-      const eventData = adventureService.createAdventureSocketEvent(
-        adventure, character, 'adventure_started'
-      );
-      io.emit(`adventure:${character.id}`, eventData);
-    }
-    
-    res.status(201).json(adventure);
+    const adventure = adventureService.startAdventure(characterId, roundedDuration);
+    res.json(adventure);
   } catch (error) {
     console.error('Error starting adventure:', error);
     res.status(500).json({ error: error.message || 'Failed to start adventure' });
