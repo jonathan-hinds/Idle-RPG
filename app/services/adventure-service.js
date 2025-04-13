@@ -193,6 +193,28 @@ function startAdventure(characterId, duration) {
   return adventure;
 }
 
+function getAdventureTimingData(adventure) {
+  const now = new Date();
+  const startTime = new Date(adventure.startTime);
+  const endTime = new Date(adventure.endTime);
+  
+  const totalDurationMs = endTime - startTime;
+  const elapsedMs = Math.max(0, now - startTime);
+  const remainingMs = Math.max(0, endTime - now);
+  
+  // Calculate percentage remaining (100% to 0%)
+  const remainingTimePercentage = Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
+  
+  return {
+    currentServerTime: now.toISOString(),
+    totalDurationMs,
+    elapsedMs,
+    remainingMs,
+    remainingTimePercentage,
+    isCompleted: now >= endTime
+  };
+}
+
 function calculateNextEventTime(fromTime, config) {
   // Convert fromTime to milliseconds since epoch
   let fromTimeMs;

@@ -79,40 +79,52 @@ class AdventureController {
     /**
      * Start an adventure for the selected character
      */
-    async startAdventure() {
-      if (!window.GameState.selectedCharacter) return;
+  async startAdventure() {
+    if (!window.GameState.selectedCharacter) return;
+    
+    try {
+      // Get duration value from dropdown
+      const durationElement = document.getElementById('adventure-duration');
+      if (!durationElement) {
+        window.Notification.error('Duration selection not found');
+        return;
+      }
       
-      try {
-        // Get duration value from dropdown
-        const durationElement = document.getElementById('adventure-duration');
-        if (!durationElement) {
-          window.Notification.error('Duration selection not found');
-          return;
-        }
-        
-        // Convert value to number
-        const duration = parseFloat(durationElement.value);
-        
-        if (isNaN(duration) || duration < 0.5 || duration > 5) {
-          window.Notification.error('Please select a valid duration between 0.5 and 5 days');
-          return;
-        }
-        
-        const result = await window.API.startAdventure(window.GameState.selectedCharacter.id, duration);
+      // Convert value to number
+      const duration = parseFloat(durationElement.value);
+      
+      if (isNaN(duration) || duration < 0.5 || duration > 5) {
+        window.Notification.error('Please select a valid duration between 0.5 and 5 days');
+        return;
+      }
+      
+      const result = await window.API.startAdventure(window.GameState.selectedCharacter.id, duration);
+      
+      // Check if we received a proper response with adventure data
+      if (result && result.active && result.adventure) {
         this.updateAdventureStatus(result);
         window.Notification.success('Adventure started successfully!');
-      } catch (error) {
-        console.error('Error starting adventure:', error);
-        window.Notification.error(error.message || 'Failed to start adventure');
+      } else {
+        // If we didn't get proper adventure data, fetch it
+        await this.loadAdventureData();
+        window.Notification.success('Adventure started successfully!');
       }
+    } catch (error) {
+      console.error('Error starting adventure:', error);
+      window.Notification.error(error.message || 'Failed to start adventure');
     }
+  }
   
     /**
      * Update the adventure status UI
      * @param {Object} adventureStatus - Current adventure status
      */
+  // In app/public/js/controllers/adventure-controller.js
+  
   updateAdventureStatus(adventureStatus) {
     if (!adventureStatus) return;
+    
+    console.log("Adventure status received:", adventureStatus);
     
     // Get UI elements
     const adventureInProgressSection = document.getElementById('adventure-in-progress');
@@ -120,8 +132,14 @@ class AdventureController {
     const adventureProgressBar = document.getElementById('adventure-progress-bar');
     const adventureTimeRemaining = document.getElementById('adventure-time-remaining');
     const adventureEndTime = document.getElementById('adventure-end-time');
+    const durationDisplay = document.getElementById('adventure-duration-display');
     
-    if (adventureStatus.active === false) {
+    // Check if elements exist and log if they don't
+    if (!adventureProgressBar) console.error("Missing adventure-progress-bar element");
+    if (!adventureTimeRemaining) console.error("Missing adventure-time-remaining element");
+    if (!adventureEndTime) console.error("Missing adventure-end-time element");
+    
+    if (!adventureStatus.active || !adventureStatus.adventure) {
       // No active adventure or adventure completed
       if (adventureStartSection) {
         adventureStartSection.classList.remove('d-none');
@@ -144,64 +162,118 @@ class AdventureController {
       const adventure = adventureStatus.adventure;
       
       // Set adventure details
-      document.getElementById('adventure-duration-display').textContent = `${adventure.duration} days`;
+      if (durationDisplay) {
+        durationDisplay.textContent = `${adventure.duration} days`;
+      }
       
-      // Calculate time difference between server and client for synchronization
+      // Get server time and calculate remaining time
       const serverTime = new Date(adventureStatus.serverTime);
-      const clientTime = new Date();
-      const timeOffset = clientTime - serverTime; // Positive if client is ahead
-      
-      // Use server time to calculate elapsed/remaining time by adjusting client time
       const startTime = new Date(adventure.startTime);
       const endTime = new Date(adventure.endTime);
-      const adjustedNow = new Date(clientTime - timeOffset); // Adjust for client/server difference
+      
+      // Calculate timing values
       const totalDurationMs = endTime - startTime;
-      const elapsedMs = Math.max(0, adjustedNow - startTime);
-      const remainingMs = Math.max(0, endTime - adjustedNow);
+      const remainingMs = Math.max(0, endTime - serverTime);
+      const remainingTimePercentage = adventureStatus.remainingTimePercentage !== undefined ? 
+        adventureStatus.remainingTimePercentage : 
+        Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
       
-      // Calculate progress as remaining time percentage (starts at 100%, goes to 0%)
-      const remainingTimePercentage = Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
-      
-      // Debug information
-      console.log("Client: Updating adventure status (time-synchronized)");
-      console.log("  Server time:", serverTime.toISOString());
-      console.log("  Client time:", clientTime.toISOString());
-      console.log("  Time offset:", timeOffset, "ms");
-      console.log("  Adjusted client time:", adjustedNow.toISOString());
-      console.log("  Start time:", startTime.toISOString());
-      console.log("  End time:", endTime.toISOString());
-      console.log("  Total duration (ms):", totalDurationMs);
-      console.log("  Elapsed (ms):", elapsedMs);
-      console.log("  Remaining (ms):", remainingMs);
-      console.log("  Remaining percentage:", remainingTimePercentage + "%");
-      
-      // Update progress bar
+      // Update progress bar - IMPORTANT FIX
       if (adventureProgressBar) {
         adventureProgressBar.style.width = `${remainingTimePercentage}%`;
         adventureProgressBar.setAttribute('aria-valuenow', remainingTimePercentage);
       }
       
-      // Update time remaining display
+      // Update time remaining - IMPORTANT FIX
       if (adventureTimeRemaining) {
-        if (remainingMs <= 0) {
-          adventureTimeRemaining.textContent = 'Complete!';
-          this.checkAdventureCompletion();
-        } else {
-          adventureTimeRemaining.textContent = this.formatTimeRemaining(remainingMs);
-        }
+        adventureTimeRemaining.textContent = this.formatTimeRemaining(remainingMs);
       }
       
-      // Set end time display
+      // Set end time display - IMPORTANT FIX
       if (adventureEndTime) {
         adventureEndTime.textContent = endTime.toLocaleString();
       }
       
-      // Start the timer to update the UI, passing the time offset for consistent updates
-      this.startAdventureTimer(adventure, timeOffset);
+      // Start the timer to keep updating the UI
+      this.startAdventureTimer(adventure, serverTime);
     }
     
     // Update adventure log if it exists
     this.updateAdventureLog(adventureStatus);
+  }
+  
+  // Modify startAdventureTimer to use server time as the base
+  startAdventureTimer(adventure, initialServerTime) {
+    // Clear any existing timer
+    if (this.adventureTimer) {
+      clearInterval(this.adventureTimer);
+    }
+    
+    // Record when we received this server time
+    const serverTimeReceivedAt = new Date();
+    
+    // Get time values
+    const startTime = new Date(adventure.startTime);
+    const endTime = new Date(adventure.endTime);
+    const totalDurationMs = endTime - startTime;
+    
+    // Set timer to update every second
+    this.adventureTimer = setInterval(() => {
+      // Calculate how much time has passed since we got the server time
+      const now = new Date();
+      const elapsedSinceServerTime = now - serverTimeReceivedAt;
+      
+      // Estimate current server time by adding elapsed time since last server time
+      const estimatedServerTime = new Date(initialServerTime.getTime() + elapsedSinceServerTime);
+      
+      // Calculate remaining time based on estimated server time
+      const remainingMs = Math.max(0, endTime - estimatedServerTime);
+      const remainingTimePercentage = Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
+      
+      // Update time remaining
+      const timeRemainingElement = document.getElementById('adventure-time-remaining');
+      if (timeRemainingElement) {
+        if (remainingMs <= 0) {
+          timeRemainingElement.textContent = 'Complete!';
+          this.checkAdventureCompletion();
+          clearInterval(this.adventureTimer);
+        } else {
+          timeRemainingElement.textContent = this.formatTimeRemaining(remainingMs);
+        }
+      }
+      
+      // Update progress bar
+      const progressBar = document.getElementById('adventure-progress-bar');
+      if (progressBar) {
+        progressBar.style.width = `${remainingTimePercentage}%`;
+        progressBar.setAttribute('aria-valuenow', remainingTimePercentage);
+      }
+    }, 1000);
+  }
+  
+    startAdventurePolling() {
+    // Clear existing poll
+    if (this.adventurePollingInterval) {
+      clearInterval(this.adventurePollingInterval);
+    }
+    
+    // Poll every 5 seconds to get fresh data from server
+    this.adventurePollingInterval = setInterval(() => {
+      if (window.GameState.selectedCharacter) {
+        window.API.getActiveAdventure(window.GameState.selectedCharacter.id)
+          .then(data => {
+            // Only update the time display, not the entire UI
+            this.updateAdventureTimeDisplay(data);
+          })
+          .catch(error => {
+            console.error('Error polling adventure status:', error);
+          });
+      }
+    }, 5000); // Every 5 seconds
+    
+    // We still need a local timer for smoother UI updates between polls
+    // But it ONLY updates the display based on last server data
+    this.startLocalDisplayTimer();
   }
   
   /**
@@ -221,6 +293,72 @@ class AdventureController {
     
     // Format as hh:mm:ss
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+    
+    updateAdventureTimeDisplay(data) {
+    if (!data.active || !data.timing) return;
+    
+    const timing = data.timing;
+    
+    const timeRemainingElement = document.getElementById('adventure-time-remaining');
+    const progressBar = document.getElementById('adventure-progress-bar');
+    
+    // Update the display with server-provided values
+    if (timeRemainingElement) {
+      if (timing.isCompleted) {
+        timeRemainingElement.textContent = 'Complete!';
+        this.checkAdventureCompletion();
+      } else {
+        timeRemainingElement.textContent = this.formatTimeRemaining(timing.remainingMs);
+      }
+    }
+    
+    if (progressBar) {
+      progressBar.style.width = `${timing.remainingTimePercentage}%`;
+      progressBar.setAttribute('aria-valuenow', timing.remainingTimePercentage);
+    }
+    
+    // Update our last known timing data
+    this.lastTimingData = timing;
+  }
+  
+  // A simple display timer that uses the last data from server
+  startLocalDisplayTimer() {
+    if (this.localDisplayTimer) {
+      clearInterval(this.localDisplayTimer);
+    }
+    
+    // Just for smooth UI updates between server polls
+    this.localDisplayTimer = setInterval(() => {
+      // Only run if we have timing data from server
+      if (!this.lastTimingData) return;
+      
+      // Estimate current remaining time based on elapsed milliseconds 
+      // since we received the last timing data
+      const elapsedSinceUpdate = Date.now() - new Date(this.lastTimingData.currentServerTime).getTime();
+      const estimatedRemainingMs = Math.max(0, this.lastTimingData.remainingMs - elapsedSinceUpdate);
+      
+      // Calculate estimated percentage
+      const totalDuration = this.lastTimingData.totalDurationMs;
+      const estimatedPercentage = Math.min(100, Math.max(0, Math.floor((estimatedRemainingMs / totalDuration) * 100)));
+      
+      // Update UI with estimated values
+      const timeRemainingElement = document.getElementById('adventure-time-remaining');
+      const progressBar = document.getElementById('adventure-progress-bar');
+      
+      if (timeRemainingElement) {
+        if (estimatedRemainingMs <= 0) {
+          timeRemainingElement.textContent = 'Complete!';
+        } else {
+          timeRemainingElement.textContent = this.formatTimeRemaining(estimatedRemainingMs);
+        }
+      }
+      
+      if (progressBar) {
+        progressBar.style.width = `${estimatedPercentage}%`;
+        progressBar.setAttribute('aria-valuenow', estimatedPercentage);
+      }
+    }, 1000);
   }
   
   /**

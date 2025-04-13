@@ -70,24 +70,19 @@ router.get('/active/:characterId', authCheck, (req, res) => {
     const adventure = adventureService.getCharacterAdventure(characterId);
     
     if (!adventure) {
-      // Return a valid response indicating no active adventure
       return res.json({ active: false });
     }
     
     // Check adventure status
     const updatedAdventure = adventureService.updateAdventure(adventure.id, character);
     
-    // Include server timestamp to synchronize client calculations
+    // Get timing data
+    const timingData = adventureService.getAdventureTimingData(updatedAdventure);
+    
     res.json({
       active: true,
       adventure: updatedAdventure,
-      serverTime: new Date().toISOString(), // Add server's current time
-      remainingTimePercentage: adventureService.createAdventureSocketEvent(
-        updatedAdventure, character, 'adventure_update'
-      ).adventure.remainingTimePercentage,
-      formattedElapsedTime: adventureService.createAdventureSocketEvent(
-        updatedAdventure, character, 'adventure_update'
-      ).adventure.formattedElapsedTime
+      timing: timingData
     });
   } catch (error) {
     console.error('Error getting active adventure:', error);
@@ -163,7 +158,17 @@ router.post('/', authCheck, (req, res) => {
     
     const adventure = adventureService.startAdventure(characterId, roundedDuration);
     
-    // If we have a socket, emit adventure started event immediately
+    // Return the same structure that the GET endpoint returns for consistency
+    // This is the crucial fix - include all the same data the GET endpoint would
+    res.json({
+      active: true,
+      adventure: adventure,
+      serverTime: new Date().toISOString(),
+      remainingTimePercentage: 100, // Just started, so 100% remaining
+      formattedElapsedTime: "00:00:00" // Just started, so 0 elapsed time
+    });
+    
+    // If we have a socket, emit adventure started event immediately (this stays the same)
     if (req.app.get('io')) {
       const io = req.app.get('io');
       const eventData = adventureService.createAdventureSocketEvent(
@@ -171,8 +176,6 @@ router.post('/', authCheck, (req, res) => {
       );
       io.emit(`adventure:${characterId}`, eventData);
     }
-    
-    res.json(adventure);
   } catch (error) {
     console.error('Error starting adventure:', error);
     res.status(500).json({ error: error.message || 'Failed to start adventure' });
