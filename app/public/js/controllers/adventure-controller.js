@@ -520,40 +520,74 @@ class AdventureController {
      * Update adventure log display
      * @param {Object} adventureStatus - Current adventure status
      */
-    updateAdventureLog(adventureStatus) {
-      const logContainer = document.getElementById('adventure-log');
-      if (!logContainer || !adventureStatus || !adventureStatus.events) return;
-      
-      // Clear existing log
-      logContainer.innerHTML = '';
-      
-      if (adventureStatus.events.length === 0) {
-        logContainer.innerHTML = '<div class="alert alert-info">No events have occurred yet.</div>';
-        return;
-      }
-      
-      // Sort events by time
-      const sortedEvents = [...adventureStatus.events].sort((a, b) => {
-        return new Date(a.time) - new Date(b.time);
-      });
-      
-      // Create log entries
-      sortedEvents.forEach(event => {
-        const eventElement = document.createElement('div');
-        eventElement.className = 'adventure-log-entry mb-2 p-2 border-bottom';
-        
-        const timeStamp = new Date(event.time).toLocaleString();
-        eventElement.innerHTML = `
-          <div class="adventure-log-time small text-muted">${timeStamp}</div>
-          <div class="adventure-log-message">${this.formatEventMessage(event)}</div>
-        `;
-        
-        logContainer.appendChild(eventElement);
-      });
-      
-      // Scroll to the bottom to show the latest events
-      logContainer.scrollTop = logContainer.scrollHeight;
+updateAdventureLog(adventureStatus) {
+  const logContainer = document.getElementById('adventure-log');
+  if (!logContainer) return;
+  
+  console.log("Updating adventure log with status:", adventureStatus);
+  
+  // Check if we have adventure data with events
+  if (!adventureStatus || !adventureStatus.adventure || !adventureStatus.adventure.events) {
+    console.log("No adventure events to display");
+    logContainer.innerHTML = '<div class="alert alert-info">No events have occurred yet.</div>';
+    return;
+  }
+  
+  const events = adventureStatus.adventure.events;
+  console.log(`Found ${events.length} adventure events to display`);
+  
+  if (events.length === 0) {
+    logContainer.innerHTML = '<div class="alert alert-info">No events have occurred yet.</div>';
+    return;
+  }
+  
+  // Sort events by time, newest first
+  const sortedEvents = [...events].sort((a, b) => {
+    return new Date(b.time) - new Date(a.time);
+  });
+  
+  // Clear existing log
+  logContainer.innerHTML = '';
+  
+  // Create log entries
+  sortedEvents.forEach(event => {
+    console.log(`Processing event: ${event.type} - ${event.description}`);
+    
+    const eventElement = document.createElement('div');
+    eventElement.className = 'adventure-log-entry mb-2 p-2 border-bottom';
+    
+    const timeStamp = new Date(event.time).toLocaleString();
+    
+    let eventClass = '';
+    switch(event.type) {
+      case 'gold_find':
+        eventClass = 'text-warning';
+        break;
+      case 'exp_gain':
+        eventClass = 'text-info';
+        break;
+      case 'item_find':
+        eventClass = 'text-primary';
+        break;
+      case 'battle_win':
+        eventClass = 'text-success';
+        break;
+      case 'battle_loss':
+        eventClass = 'text-danger';
+        break;
     }
+    
+    eventElement.innerHTML = `
+      <div class="adventure-log-time small text-muted">${timeStamp}</div>
+      <div class="adventure-log-message ${eventClass}">${event.description}</div>
+    `;
+    
+    logContainer.appendChild(eventElement);
+  });
+  
+  // Scroll to the bottom to show the latest events
+  logContainer.scrollTop = logContainer.scrollHeight;
+}
   
     /**
      * Format event message for display

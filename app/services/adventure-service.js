@@ -16,36 +16,48 @@ let eventsCache = null;
  * Get adventure configuration
  * @returns {Object} Adventure configuration
  */
+/**
+ * Get adventure configuration
+ * @returns {Object} Adventure configuration
+ */
 function getAdventureConfig() {
+  if (configCache) return configCache;
+  
   try {
-    // Try to read from config file
-    const configPath = path.join(__dirname, '..', 'data', 'adventure-config.json');
+    const config = readDataFile('adventure-config.json');
+    console.log("Loaded adventure config:", config);
     
-    if (fs.existsSync(configPath)) {
-      const configData = fs.readFileSync(configPath, 'utf8');
-      const config = JSON.parse(configData);
-      
-      // Validate the config has required properties
-      if (!config.day_length || !config.event_interval || 
-          !config.event_interval.min || !config.event_interval.max) {
-        throw new Error('Invalid config format');
-      }
-      
-      return config;
-    } else {
-      throw new Error('Config file not found');
+    // Validate the config has required properties
+    if (!config.day_length || !config.event_interval || 
+        !config.event_interval.min || !config.event_interval.max) {
+      throw new Error('Invalid config format');
     }
-  } catch (error) {
-    console.log('Using default adventure config:', error.message);
     
-    // Return default config if file doesn't exist or is invalid
-    return {
+    configCache = config;
+    return config;
+  } catch (error) {
+    console.error("Error loading adventure config:", error);
+    
+    // Provide default configuration
+    const defaultConfig = {
       day_length: 3600, // 1 hour = 1 in-game day
+      testing: {
+        day_length: 60  // 1 minute = 1 in-game day for testing
+      },
       event_interval: {
-        min: 300, // 5 minutes minimum between events
-        max: 900  // 15 minutes maximum between events
-      }
+        min: 300, // 5 minutes
+        max: 900  // 15 minutes
+      },
+      testing_event_interval: {
+        min: 5,   // 5 seconds for testing
+        max: 15   // 15 seconds for testing
+      },
+      use_testing_values: false // Set to true to use faster values for testing
     };
+    
+    console.log("Using default adventure config:", defaultConfig);
+    configCache = defaultConfig;
+    return defaultConfig;
   }
 }
 
@@ -53,10 +65,41 @@ function getAdventureConfig() {
  * Get adventure events configuration
  * @returns {Object} Adventure events configuration
  */
+/**
+ * Get adventure events configuration
+ * @returns {Object} Adventure events configuration
+ */
 function getAdventureEvents() {
   if (eventsCache) return eventsCache;
-  eventsCache = readDataFile('adventure-events.json');
-  return eventsCache;
+  
+  try {
+    eventsCache = readDataFile('adventure-events.json');
+    console.log("Loaded event configuration:", eventsCache);
+    return eventsCache;
+  } catch (error) {
+    console.error("Error loading adventure events configuration:", error);
+    
+    // Provide default configuration
+    const defaultConfig = {
+      "event_chances": {
+        "battle": 35,
+        "gold_find": 30,
+        "exp_gain": 15,
+        "item_find": 20
+      },
+      "item_rarity_chances": {
+        "Common": 60,
+        "Uncommon": 25,
+        "Rare": 10,
+        "Epic": 4,
+        "Legendary": 1
+      }
+    };
+    
+    console.log("Using default event configuration:", defaultConfig);
+    eventsCache = defaultConfig;
+    return defaultConfig;
+  }
 }
 
 /**
@@ -105,62 +148,69 @@ function getCharacterAdventure(characterId) {
  * @param {number} duration - Adventure duration in days
  * @returns {Object} New adventure
  */
+/**
+ * Start a new adventure
+ * @param {Object} character - Character data
+ * @param {number} duration - Adventure duration in days
+ * @returns {Object} New adventure
+ */
+/**
+ * Start a new adventure
+ * @param {string} characterId - Character ID
+ * @param {number} duration - Adventure duration in days
+ * @returns {Object} New adventure
+ */
 function startAdventure(characterId, duration) {
   // Load adventures file
   const adventures = readDataFile('adventures.json');
   
   // Check if character is already on an adventure
-  if (adventures.some(adv => adv.characterId === characterId && !adv.isCompleted)) {
+  if (adventures.some(adv => adv.characterId === characterId && adv.status === 'active')) {
     throw new Error('Character is already on an adventure');
   }
   
-  // Validate and parse duration to ensure it's a number
+  // Validate duration
   const durationValue = parseFloat(duration);
-  
-  // Additional validation to be safe
   if (isNaN(durationValue) || durationValue < 0.5 || durationValue > 5) {
     throw new Error('Invalid duration. Must be between 0.5 and 5 days');
   }
   
-  // Round to nearest 0.5 increment to avoid floating point issues
+  // Round to nearest 0.5 increment
   const roundedDuration = Math.round(durationValue * 2) / 2;
   
   // Load config
   const config = getAdventureConfig();
-    // Debug logging
-  console.log("Adventure config:", config);
-  console.log("Duration days:", durationValue);
+  console.log("Using adventure config:", config);
   
-  // Make sure day_length is exactly 3600 for 1 hour
-  const durationInDays = parseFloat(duration);
+  // Get the appropriate event interval based on config
+  const eventInterval = config.use_testing_values ? 
+    config.testing_event_interval : config.event_interval;
   
-  // This should be 3600 seconds for 1 hour per day
-  const dayLengthInSeconds = config.day_length || 3600;
-  console.log("Day length in seconds:", dayLengthInSeconds);
+  console.log("Using event interval:", eventInterval);
   
-  const durationInSeconds = durationInDays * dayLengthInSeconds;
-  console.log("Total duration in seconds:", durationInSeconds);
-  
-  const durationInMs = durationInSeconds * 1000;
-  console.log("Total duration in ms:", durationInMs);
-  
-  // Current time as milliseconds since epoch
   const now = Date.now();
-  console.log("Current server time:", new Date(now).toISOString());
   
-  // Calculate duration in milliseconds
-  const durationMs = Math.floor(roundedDuration * config.day_length * 1000);
-  
-  // Calculate end time as milliseconds since epoch
+  // Calculate end time
+  const dayLength = config.use_testing_values ? config.testing.day_length : config.day_length;
+  const durationMs = Math.floor(roundedDuration * dayLength * 1000);
   const endTimeMs = now + durationMs;
-  console.log("Calculated end time:", new Date(endTimeMs).toISOString());
   
-  // Calculate when the next event should occur
-  const nextEventDelayMs = randomInt(
-    config.event_interval.min * 1000, 
-    config.event_interval.max * 1000
+  // Calculate when the first event should occur - MUCH sooner than the regular interval
+  // This ensures an event happens quickly after starting
+  const firstEventDelayMs = randomInt(
+    Math.min(30, eventInterval.min) * 1000, // Maximum 30 seconds or the configured minimum
+    Math.min(60, eventInterval.max) * 1000  // Maximum 60 seconds or the configured maximum
   );
-  const nextEventTimeMs = now + nextEventDelayMs;
+  
+  console.log(`First event will occur in ${firstEventDelayMs/1000} seconds`);
+  
+  // Get the character to access their health
+  const characters = readDataFile('characters.json');
+  const character = characters.find(c => c.id === characterId);
+  
+  if (!character) {
+    throw new Error('Character not found');
+  }
   
   // Create adventure object
   const adventure = {
@@ -169,20 +219,21 @@ function startAdventure(characterId, duration) {
     startTime: new Date(now).toISOString(),
     endTime: new Date(endTimeMs).toISOString(),
     duration: roundedDuration,
-    isCompleted: false,
+    status: 'active',
     events: [],
     rewards: {
       experience: 0,
       gold: 0,
       items: []
     },
-    nextEventTime: new Date(nextEventTimeMs).toISOString(),
+    nextEventTime: new Date(now + firstEventDelayMs).toISOString(),
+    currentHealth: character.stats.health, // Use character's actual health
+    maxHealth: character.stats.health,     // Use character's max health
     createdAt: new Date(now).toISOString()
   };
   
-  console.log("Adventure created with start:", adventure.startTime);
-  console.log("Adventure created with end:", adventure.endTime);
-  console.log("Adventure duration:", adventure.duration, "days");
+  console.log("Created adventure:", adventure);
+  console.log(`First event scheduled for: ${adventure.nextEventTime}`);
   
   // Add to adventures array
   adventures.push(adventure);
@@ -260,49 +311,93 @@ function processAdventureEvent(adventure, character) {
   const config = getAdventureConfig();
   const eventConfig = getAdventureEvents();
   
-  // Process day completion first (for healing)
-  adventure = adventureModel.processDayCompletion(adventure, config);
+  console.log('[Event Generation] Processing new adventure event');
+  console.log('[Event Generation] Event config:', eventConfig);
   
   // Roll for event type
   const eventRoll = Math.random() * 100;
   let eventType;
   let cumulative = 0;
   
-  for (const [type, chance] of Object.entries(eventConfig.event_chances)) {
+  // Default event chances if config is missing
+  const eventChances = eventConfig.event_chances || {
+    battle: 35,
+    gold_find: 30,
+    exp_gain: 15,
+    item_find: 20
+  };
+  
+  console.log(`[Event Generation] Event roll: ${eventRoll.toFixed(2)}`);
+  
+  for (const [type, chance] of Object.entries(eventChances)) {
     cumulative += chance;
+    console.log(`[Event Generation] Checking ${type}: threshold ${cumulative.toFixed(2)}`);
     if (eventRoll < cumulative) {
       eventType = type;
       break;
     }
   }
   
+  console.log(`[Event Generation] Selected event type: ${eventType}`);
+  
+  // For now, let's temporarily force an event type for testing
+  // This ensures we're at least generating some events
+  if (adventure.events.length === 0) {
+    // First event is always gold to ensure something happens
+    eventType = 'gold_find';
+    console.log('[Event Generation] Forcing first event to be gold_find for testing');
+  } else if (adventure.events.length % 4 === 1) {
+    // Every 4th event (after the first) is exp
+    eventType = 'exp_gain';
+    console.log('[Event Generation] Forcing exp_gain event for testing');
+  } else if (adventure.events.length % 4 === 2) {
+    // Every 4th event (after the second) is item
+    eventType = 'item_find';
+    console.log('[Event Generation] Forcing item_find event for testing');
+  }
+  
   // Process the event
+  let updatedAdventure;
   switch (eventType) {
     case 'battle':
-      return processBattleEvent(adventure, character);
+      console.log('[Event Generation] Processing battle event');
+      // For now, we'll skip battle processing and just record a gold event instead
+      // This is temporary until battle mechanics are fully implemented
+      updatedAdventure = adventureModel.processGoldFind(adventure, true);
+      break;
     
     case 'gold_find':
+      console.log('[Event Generation] Processing gold find event');
       // 30% chance for large gold amount
       const isLargeGold = Math.random() < 0.3;
-      return adventureModel.processGoldFind(adventure, isLargeGold);
+      updatedAdventure = adventureModel.processGoldFind(adventure, isLargeGold);
+      break;
     
     case 'exp_gain':
+      console.log('[Event Generation] Processing exp gain event');
       // 30% chance for large exp amount
       const isLargeExp = Math.random() < 0.3;
-      return adventureModel.processExpGain(adventure, character, isLargeExp);
+      updatedAdventure = adventureModel.processExpGain(adventure, character, isLargeExp);
+      break;
     
     case 'item_find':
-      return processItemFindEvent(adventure);
+      console.log('[Event Generation] Processing item find event');
+      updatedAdventure = processItemFindEvent(adventure);
+      break;
     
     default:
+      console.log('[Event Generation] No valid event type, using generic event');
       // Fallback to a simple event
-      return adventureModel.recordEvent(
+      updatedAdventure = adventureModel.recordEvent(
         adventure, 
         'generic', 
         'You continue your adventure.', 
         {}
       );
   }
+  
+  console.log(`[Event Generation] Adventure now has ${updatedAdventure.events.length} events`);
+  return updatedAdventure;
 }
 
 /**
@@ -397,27 +492,64 @@ function createOpponent(character, difficulty) {
  * @param {Object} adventure - Adventure state
  * @returns {Object} Updated adventure
  */
+/**
+ * Process an item find event
+ * @param {Object} adventure - Adventure state
+ * @returns {Object} Updated adventure
+ */
 function processItemFindEvent(adventure) {
   const eventConfig = getAdventureEvents();
+  
+  console.log('[Item Find] Processing item find event');
+  
+  // Default item rarity chances if config is missing
+  const rarityChances = eventConfig.item_rarity_chances || {
+    Common: 60,
+    Uncommon: 25,
+    Rare: 10,
+    Epic: 4,
+    Legendary: 1
+  };
   
   // Roll for item rarity
   const rarityRoll = Math.random() * 100;
   let rarity;
   let cumulative = 0;
   
-  for (const [type, chance] of Object.entries(eventConfig.item_rarity_chances)) {
+  console.log(`[Item Find] Rarity roll: ${rarityRoll.toFixed(2)}`);
+  
+  for (const [type, chance] of Object.entries(rarityChances)) {
     cumulative += chance;
+    console.log(`[Item Find] Checking ${type}: threshold ${cumulative.toFixed(2)}`);
     if (rarityRoll < cumulative) {
       rarity = type;
       break;
     }
   }
   
+  console.log(`[Item Find] Selected rarity: ${rarity}`);
+  
+  // Make sure we have a valid rarity
+  if (!rarity) {
+    rarity = "Common"; // Fallback
+  }
+  
   // Get a random item of the selected rarity
   const item = itemService.getRandomItemByRarity(rarity);
   
   if (!item) {
-    // Fallback if no item found
+    console.log(`[Item Find] No items found for rarity: ${rarity}`);
+    // If we can't find an item, just use the first available item
+    const allItems = itemService.loadItems();
+    const randomItem = allItems.length > 0 ? 
+      allItems[Math.floor(Math.random() * allItems.length)] : null;
+    
+    if (randomItem) {
+      console.log(`[Item Find] Using random item instead: ${randomItem.name}`);
+      return adventureModel.processItemFind(adventure, randomItem.id, randomItem.name, rarity);
+    }
+    
+    // Fallback if no item found at all
     return adventureModel.recordEvent(
       adventure, 
       'item_search', 
@@ -426,7 +558,7 @@ function processItemFindEvent(adventure) {
     );
   }
   
-  // Add the item
+  console.log(`[Item Find] Found item: ${item.name} (${rarity})`);
   return adventureModel.processItemFind(adventure, item.id, item.name, rarity);
 }
 
@@ -471,6 +603,12 @@ function checkAdventureStatus(adventureId) {
  * @param {Object} character - Character data
  * @returns {Object} Updated adventure
  */
+/**
+ * Process adventure events and update status
+ * @param {string} adventureId - Adventure ID
+ * @param {Object} character - Character data
+ * @returns {Object} Updated adventure
+ */
 function updateAdventure(adventureId, character) {
   let adventure = getAdventure(adventureId);
   
@@ -485,17 +623,43 @@ function updateAdventure(adventureId, character) {
   
   // Check if time for new event
   const now = new Date();
-  const nextEventTime = new Date(adventure.nextEventTime);
+  const nextEventTime = adventure.nextEventTime ? new Date(adventure.nextEventTime) : null;
   
-  if (now >= nextEventTime) {
+  // Debug logging
+  console.log(`[Event Check] now=${now.toISOString()}, nextEventTime=${nextEventTime ? nextEventTime.toISOString() : 'null'}`);
+  
+  // If nextEventTime is not set or has passed, generate an event
+  if (!nextEventTime || now >= nextEventTime) {
+    console.log('[Event] Time for a new event!');
+    
     // Process new event
     adventure = processAdventureEvent(adventure, character);
     
+    // Set the next event time
+    const config = getAdventureConfig();
+    const eventInterval = config.use_testing_values ? 
+      config.testing_event_interval : config.event_interval;
+    
+    const nextEventDelayMs = randomInt(
+      eventInterval.min * 1000, 
+      eventInterval.max * 1000
+    );
+    
+    adventure.nextEventTime = new Date(now.getTime() + nextEventDelayMs).toISOString();
+    
+    console.log(`[Event] New event scheduled for: ${adventure.nextEventTime} (in ${nextEventDelayMs/1000} seconds)`);
+    console.log(`[Event] Current event count: ${adventure.events.length}`);
+    
     // Check if adventure has ended
-    if (adventure.currentHealth <= 0) {
-      adventure = adventureModel.completeAdventure(adventure, 'death');
-    } else if (now >= new Date(adventure.endTime)) {
-      adventure = adventureModel.completeAdventure(adventure, 'success');
+    const endTime = new Date(adventure.endTime);
+    if (now >= endTime) {
+      console.log('[Event] Adventure has reached end time, marking as completed');
+      adventure.status = 'completed';
+      adventure = adventureModel.recordEvent(adventure, 'adventure_end', 'Adventure completed successfully!', {});
+    } else if (adventure.currentHealth <= 0) {
+      console.log('[Event] Character has 0 health, marking adventure as failed');
+      adventure.status = 'failed';
+      adventure = adventureModel.recordEvent(adventure, 'adventure_end', 'You were defeated! Adventure failed.', {});
     }
     
     // Save updated adventure
@@ -504,8 +668,12 @@ function updateAdventure(adventureId, character) {
     if (index !== -1) {
       adventures[index] = adventure;
       writeDataFile('adventures.json', adventures);
+      
+      // Clear cache to ensure we get the updated adventure next time
       clearAdventureCache();
     }
+  } else {
+    console.log(`[Event] Next event in ${Math.round((nextEventTime - now) / 1000)} seconds`);
   }
   
   return adventure;

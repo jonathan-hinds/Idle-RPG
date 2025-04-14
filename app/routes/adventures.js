@@ -51,14 +51,6 @@ router.get('/character/:characterId', authCheck, (req, res) => {
   }
 });
 
-/**
- * Get active adventure for a character
- * GET /api/adventures/active/:characterId
- */
-/**
- * Get active adventure for a character
- * GET /api/adventures/active/:characterId
- */
 router.get('/active/:characterId', authCheck, (req, res) => {
   try {
     const characterId = req.params.characterId;
@@ -88,7 +80,7 @@ router.get('/active/:characterId', authCheck, (req, res) => {
       });
     }
     
-    // Check if the adventure has ended based on time
+    // Get current time
     const now = new Date();
     const endTime = new Date(adventure.endTime);
     const isExpired = now >= endTime;
@@ -102,8 +94,11 @@ router.get('/active/:characterId', authCheck, (req, res) => {
     }
     
     // Adventure is still active
+    // Check adventure status and process any pending events
+    const updatedAdventure = adventureService.updateAdventure(adventure.id, character);
+    
     // Calculate timing information
-    const startTime = new Date(adventure.startTime);
+    const startTime = new Date(updatedAdventure.startTime);
     const totalDurationMs = endTime - startTime;
     const elapsedMs = Math.max(0, now - startTime);
     const remainingMs = Math.max(0, endTime - now);
@@ -111,10 +106,10 @@ router.get('/active/:characterId', authCheck, (req, res) => {
     // Calculate percentage remaining (100% to 0%)
     const remainingTimePercentage = Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
     
-    // Return the adventure with active: true
+    // Return the updated adventure with all timing data
     res.json({
       active: true,
-      adventure: adventure,
+      adventure: updatedAdventure,
       serverTime: now.toISOString(),
       remainingTimePercentage: remainingTimePercentage,
       timing: {

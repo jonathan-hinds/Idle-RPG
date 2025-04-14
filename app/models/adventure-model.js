@@ -137,6 +137,12 @@ function recordEvent(adventure, type, description, details = {}) {
  * @param {boolean} isLargeAmount - Whether this is a large gold amount
  * @returns {Object} Updated adventure state
  */
+/**
+ * Process gold find event
+ * @param {Object} adventure - Adventure state
+ * @param {boolean} isLargeAmount - Whether this is a large gold amount
+ * @returns {Object} Updated adventure state
+ */
 function processGoldFind(adventure, isLargeAmount) {
   const baseAmount = 50;
   const multiplier = isLargeAmount ? 3 : 1;
@@ -162,6 +168,7 @@ function processGoldFind(adventure, isLargeAmount) {
  * @returns {Object} Updated adventure state
  */
 function processExpGain(adventure, character, isLargeAmount) {
+  const { calculateExpForNextLevel } = require('./character-model');
   const expForNextLevel = calculateExpForNextLevel(character.level);
   const percentage = isLargeAmount ? 0.1 : 0.05;
   const amount = Math.floor(expForNextLevel * percentage);
@@ -196,6 +203,29 @@ function processItemFind(adventure, itemId, itemName, rarity) {
     itemName,
     rarity
   });
+}
+
+/**
+ * Record a new event in the adventure
+ * @param {Object} adventure - Adventure state
+ * @param {string} type - Event type
+ * @param {string} description - Event description
+ * @param {Object} details - Additional event details
+ * @returns {Object} Updated adventure
+ */
+function recordEvent(adventure, type, description, details = {}) {
+  if (!adventure.events) {
+    adventure.events = [];
+  }
+  
+  adventure.events.push({
+    time: new Date().toISOString(),
+    type,
+    description,
+    details
+  });
+  
+  return adventure;
 }
 
 /**
