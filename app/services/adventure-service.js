@@ -160,13 +160,24 @@ function getCharacterAdventure(characterId) {
  * @param {number} duration - Adventure duration in days
  * @returns {Object} New adventure
  */
+// In app/services/adventure-service.js - Complete startAdventure function
 function startAdventure(characterId, duration) {
   // Load adventures file
   const adventures = readDataFile('adventures.json');
   
-  // Check if character is already on an adventure
+  // Check if character is already on an active adventure
   if (adventures.some(adv => adv.characterId === characterId && adv.status === 'active')) {
     throw new Error('Character is already on an adventure');
+  }
+  
+  // Find any completed/failed adventures that haven't been collected
+  const pendingAdventures = adventures.filter(adv => 
+    adv.characterId === characterId && 
+    (adv.status === 'completed' || adv.status === 'failed')
+  );
+  
+  if (pendingAdventures.length > 0) {
+    throw new Error('You have completed adventures with uncollected rewards. Please collect your rewards before starting a new adventure.');
   }
   
   // Validate duration
@@ -567,6 +578,7 @@ function processItemFindEvent(adventure) {
  * @param {string} adventureId - Adventure ID
  * @returns {Object} Updated adventure
  */
+// In app/services/adventure-service.js - Complete checkAdventureStatus function
 function checkAdventureStatus(adventureId) {
   const adventure = getAdventure(adventureId);
   
@@ -580,9 +592,28 @@ function checkAdventureStatus(adventureId) {
   }
   
   // Check if adventure has ended
-  if (adventureModel.isAdventureEnded(adventure)) {
+  const now = new Date();
+  const endTime = new Date(adventure.endTime);
+  
+  if (now >= endTime || adventure.currentHealth <= 0) {
+    // Adventure has ended, update status
     const reason = adventure.currentHealth <= 0 ? 'death' : 'success';
-    adventureModel.completeAdventure(adventure, reason);
+    adventure.status = reason === 'death' ? 'failed' : 'completed';
+    
+    // Add end event if not already present
+    if (!adventure.events.some(e => e.type === 'adventure_end')) {
+      adventure = adventureModel.recordEvent(
+        adventure,
+        'adventure_end',
+        reason === 'death' 
+          ? 'Adventure failed due to death.' 
+          : `Adventure completed successfully! Earned ${adventure.rewards.gold} gold, ${adventure.rewards.experience} exp, and ${adventure.rewards.items.length} items.`,
+        {
+          reason,
+          rewards: { ...adventure.rewards }
+        }
+      );
+    }
     
     // Save updated adventure
     const adventures = loadAdventures();
@@ -685,6 +716,7 @@ function updateAdventure(adventureId, character) {
  * @param {Object} character - Character data
  * @returns {Object} Result with updated character and rewards
  */
+// In app/services/adventure-service.js - Complete collectAdventureRewards function
 function collectAdventureRewards(adventureId, character) {
   const adventure = getAdventure(adventureId);
   

@@ -376,6 +376,7 @@
 </div>
             <!-- Adventure Tab -->
 <!-- In the Adventure tab content section -->
+<!-- Adventure Tab -->
 <div class="tab-pane fade" id="adventure" role="tabpanel" aria-labelledby="adventure-tab">
   <h4>Adventure Mode</h4>
   
@@ -413,6 +414,18 @@
       </div>
     </div>
     
+    <!-- Adventure Rewards (shown when adventure is completed but rewards not collected) -->
+    <div id="adventure-rewards-section" class="card mb-3 d-none">
+      <div class="card-header">
+        <h5>Adventure Rewards</h5>
+      </div>
+      <div class="card-body">
+        <div id="adventure-rewards-content">
+          <!-- Rewards will be shown here -->
+        </div>
+      </div>
+    </div>
+    
     <!-- Adventure Progress (shown when adventure is active) -->
     <div id="adventure-in-progress" class="card mb-3 d-none">
       <div class="card-header">
@@ -432,6 +445,38 @@
           <div id="adventure-progress-bar" class="progress-bar" role="progressbar" style="width: 0%" 
                aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
         </div>
+        
+        <!-- Character Health -->
+        <div class="mb-3">
+          <label>Character Health:</label>
+          <div class="progress">
+            <div id="adventure-health-bar" class="progress-bar bg-danger" role="progressbar" style="width: 100%" 
+                 aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">100%</div>
+          </div>
+        </div>
+        
+        <!-- Adventure Rewards Preview -->
+        <div class="card mb-3">
+          <div class="card-header">
+            <h6>Rewards So Far</h6>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4">
+                <strong>Gold:</strong> <span id="adventure-gold-reward">0</span>
+              </div>
+              <div class="col-md-4">
+                <strong>Experience:</strong> <span id="adventure-exp-reward">0</span>
+              </div>
+              <div class="col-md-4">
+                <strong>Items:</strong> <span id="adventure-item-reward">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <button id="abandon-adventure-btn" class="btn btn-danger">Abandon Adventure</button>
+        <button id="collect-rewards-btn" class="btn btn-success d-none">Collect Rewards</button>
       </div>
     </div>
     
@@ -444,6 +489,37 @@
         <div id="adventure-log" class="p-3 bg-light" style="height: 300px; overflow-y: auto;">
           <div class="alert alert-info">No events have occurred yet.</div>
         </div>
+      </div>
+    </div>
+    
+    <!-- Adventure History -->
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5>Adventure History</h5>
+      </div>
+      <div class="card-body">
+        <div id="adventure-history-list">
+          <!-- Adventure history will be shown here -->
+          <p class="text-muted">No past adventures.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Adventure Log Modal -->
+<div class="modal fade" id="adventure-log-modal" tabindex="-1" aria-labelledby="adventure-log-modal-title" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="adventure-log-modal-title">Adventure Log</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="adventure-log-modal-body">
+        <!-- Adventure log details will be shown here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>

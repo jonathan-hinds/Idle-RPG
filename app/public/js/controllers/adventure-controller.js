@@ -121,135 +121,262 @@ class AdventureController {
      */
   // In app/public/js/controllers/adventure-controller.js
   
-  updateAdventureStatus(adventureStatus) {
-    if (!adventureStatus) return;
-    
-    console.log("Adventure status received:", adventureStatus);
-    
-    // Get UI elements
-    const adventureInProgressSection = document.getElementById('adventure-in-progress');
-    const adventureStartSection = document.getElementById('adventure-start-section');
-    const adventureProgressBar = document.getElementById('adventure-progress-bar');
-    const adventureTimeRemaining = document.getElementById('adventure-time-remaining');
-    const adventureEndTime = document.getElementById('adventure-end-time');
-    const durationDisplay = document.getElementById('adventure-duration-display');
-    
-    // Check if elements exist and log if they don't
-    if (!adventureProgressBar) console.error("Missing adventure-progress-bar element");
-    if (!adventureTimeRemaining) console.error("Missing adventure-time-remaining element");
-    if (!adventureEndTime) console.error("Missing adventure-end-time element");
-    
-    if (!adventureStatus.active || !adventureStatus.adventure) {
-      // No active adventure or adventure completed
-      if (adventureStartSection) {
-        adventureStartSection.classList.remove('d-none');
+// In app/public/js/controllers/adventure-controller.js - Complete updateAdventureStatus function
+updateAdventureStatus(adventureStatus) {
+  if (!adventureStatus) return;
+  
+  console.log("Adventure status received:", adventureStatus);
+  
+  // Get UI elements
+  const adventureInProgressSection = document.getElementById('adventure-in-progress');
+  const adventureStartSection = document.getElementById('adventure-start-section');
+  const adventureProgressBar = document.getElementById('adventure-progress-bar');
+  const adventureTimeRemaining = document.getElementById('adventure-time-remaining');
+  const adventureEndTime = document.getElementById('adventure-end-time');
+  const durationDisplay = document.getElementById('adventure-duration-display');
+  const adventureRewardsSection = document.getElementById('adventure-rewards-section');
+  const adventureLog = document.getElementById('adventure-log');
+  
+  // Check if elements exist and log if they don't
+  if (!adventureProgressBar) console.error("Missing adventure-progress-bar element");
+  if (!adventureTimeRemaining) console.error("Missing adventure-time-remaining element");
+  if (!adventureEndTime) console.error("Missing adventure-end-time element");
+  
+  if (!adventureStatus.active) {
+    // Show rewards section if there are pending rewards
+    if (adventureStatus.hasPendingRewards && adventureStatus.pendingAdventure) {
+      // Hide other sections
+      if (adventureStartSection) adventureStartSection.classList.add('d-none');
+      if (adventureInProgressSection) adventureInProgressSection.classList.add('d-none');
+      
+      // Show rewards section with pending adventure data
+      if (adventureRewardsSection) {
+        adventureRewardsSection.classList.remove('d-none');
+        this.displayPendingRewards(adventureStatus.pendingAdventure);
       }
       
-      if (adventureInProgressSection) {
-        adventureInProgressSection.classList.add('d-none');
+      // Also update the adventure log with events from the pending adventure
+      if (adventureLog && adventureStatus.pendingAdventure.events) {
+        this.updateAdventureLog({ 
+          adventure: adventureStatus.pendingAdventure 
+        });
       }
-      return;
+    } else {
+      // No active adventure or pending rewards, show start section
+      if (adventureStartSection) adventureStartSection.classList.remove('d-none');
+      if (adventureInProgressSection) adventureInProgressSection.classList.add('d-none');
+      if (adventureRewardsSection) adventureRewardsSection.classList.add('d-none');
     }
-    
-    // Adventure is in progress
-    if (adventureStartSection) {
-      adventureStartSection.classList.add('d-none');
-    }
-    
-    if (adventureInProgressSection) {
-      adventureInProgressSection.classList.remove('d-none');
-      
-      const adventure = adventureStatus.adventure;
-      
-      // Set adventure details
-      if (durationDisplay) {
-        durationDisplay.textContent = `${adventure.duration} days`;
-      }
-      
-      // Get server time and calculate remaining time
-      const serverTime = new Date(adventureStatus.serverTime);
-      const startTime = new Date(adventure.startTime);
-      const endTime = new Date(adventure.endTime);
-      
-      // Calculate timing values
-      const totalDurationMs = endTime - startTime;
-      const remainingMs = Math.max(0, endTime - serverTime);
-      const remainingTimePercentage = adventureStatus.remainingTimePercentage !== undefined ? 
-        adventureStatus.remainingTimePercentage : 
-        Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
-      
-      // Update progress bar - IMPORTANT FIX
-      if (adventureProgressBar) {
-        adventureProgressBar.style.width = `${remainingTimePercentage}%`;
-        adventureProgressBar.setAttribute('aria-valuenow', remainingTimePercentage);
-      }
-      
-      // Update time remaining - IMPORTANT FIX
-      if (adventureTimeRemaining) {
-        adventureTimeRemaining.textContent = this.formatTimeRemaining(remainingMs);
-      }
-      
-      // Set end time display - IMPORTANT FIX
-      if (adventureEndTime) {
-        adventureEndTime.textContent = endTime.toLocaleString();
-      }
-      
-      // Start the timer to keep updating the UI
-      this.startAdventureTimer(adventure, serverTime);
-    }
-    
-    // Update adventure log if it exists
-    this.updateAdventureLog(adventureStatus);
+    return;
   }
   
-  // Modify startAdventureTimer to use server time as the base
-  startAdventureTimer(adventure, initialServerTime) {
-    // Clear any existing timer
-    if (this.adventureTimer) {
-      clearInterval(this.adventureTimer);
+  // Adventure is active
+  if (adventureStartSection) {
+    adventureStartSection.classList.add('d-none');
+  }
+  if (adventureRewardsSection) {
+    adventureRewardsSection.classList.add('d-none');
+  }
+  
+  if (adventureInProgressSection) {
+    adventureInProgressSection.classList.remove('d-none');
+    
+    const adventure = adventureStatus.adventure;
+    
+    // Set adventure details
+    if (durationDisplay) {
+      durationDisplay.textContent = `${adventure.duration} days`;
     }
     
-    // Record when we received this server time
-    const serverTimeReceivedAt = new Date();
-    
-    // Get time values
+    // Get server time and calculate remaining time
+    const serverTime = new Date(adventureStatus.serverTime);
     const startTime = new Date(adventure.startTime);
     const endTime = new Date(adventure.endTime);
-    const totalDurationMs = endTime - startTime;
     
-    // Set timer to update every second
-    this.adventureTimer = setInterval(() => {
-      // Calculate how much time has passed since we got the server time
-      const now = new Date();
-      const elapsedSinceServerTime = now - serverTimeReceivedAt;
-      
-      // Estimate current server time by adding elapsed time since last server time
-      const estimatedServerTime = new Date(initialServerTime.getTime() + elapsedSinceServerTime);
-      
-      // Calculate remaining time based on estimated server time
-      const remainingMs = Math.max(0, endTime - estimatedServerTime);
-      const remainingTimePercentage = Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
-      
-      // Update time remaining
-      const timeRemainingElement = document.getElementById('adventure-time-remaining');
-      if (timeRemainingElement) {
-        if (remainingMs <= 0) {
-          timeRemainingElement.textContent = 'Complete!';
-          this.checkAdventureCompletion();
-          clearInterval(this.adventureTimer);
-        } else {
-          timeRemainingElement.textContent = this.formatTimeRemaining(remainingMs);
-        }
-      }
-      
-      // Update progress bar
-      const progressBar = document.getElementById('adventure-progress-bar');
-      if (progressBar) {
-        progressBar.style.width = `${remainingTimePercentage}%`;
-        progressBar.setAttribute('aria-valuenow', remainingTimePercentage);
-      }
-    }, 1000);
+    // Calculate timing values
+    const totalDurationMs = endTime - startTime;
+    const remainingMs = Math.max(0, endTime - serverTime);
+    const remainingTimePercentage = adventureStatus.remainingTimePercentage !== undefined ? 
+      adventureStatus.remainingTimePercentage : 
+      Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
+    
+    // Update progress bar
+    if (adventureProgressBar) {
+      adventureProgressBar.style.width = `${remainingTimePercentage}%`;
+      adventureProgressBar.setAttribute('aria-valuenow', remainingTimePercentage);
+    }
+    
+    // Update time remaining
+    if (adventureTimeRemaining) {
+      adventureTimeRemaining.textContent = this.formatTimeRemaining(remainingMs);
+    }
+    
+    // Set end time display
+    if (adventureEndTime) {
+      adventureEndTime.textContent = endTime.toLocaleString();
+    }
+    
+    // Update health display
+    const healthBar = document.getElementById('adventure-health-bar');
+    if (healthBar && adventure.currentHealth !== undefined && adventure.maxHealth) {
+      const healthPercentage = Math.max(0, Math.min(100, Math.round((adventure.currentHealth / adventure.maxHealth) * 100)));
+      healthBar.style.width = `${healthPercentage}%`;
+      healthBar.setAttribute('aria-valuenow', healthPercentage);
+      healthBar.textContent = `${adventure.currentHealth} / ${adventure.maxHealth}`;
+    }
+    
+    // Update rewards display
+    const goldReward = document.getElementById('adventure-gold-reward');
+    const expReward = document.getElementById('adventure-exp-reward');
+    const itemReward = document.getElementById('adventure-item-reward');
+    
+    if (goldReward && adventure.rewards) goldReward.textContent = adventure.rewards.gold;
+    if (expReward && adventure.rewards) expReward.textContent = adventure.rewards.experience;
+    if (itemReward && adventure.rewards) itemReward.textContent = adventure.rewards.items.length;
+    
+    // Start the timer to keep updating the UI
+    this.startAdventureTimer(adventure, serverTime);
   }
+  
+  // Update adventure log if we have events
+  this.updateAdventureLog(adventureStatus);
+}
+  
+ // In app/public/js/controllers/adventure-controller.js - Complete displayPendingRewards function
+displayPendingRewards(adventure) {
+  // Find the rewards display container
+  const rewardsContainer = document.getElementById('adventure-rewards-content');
+  if (!rewardsContainer) return;
+  
+  // Create content to display rewards
+  let html = `
+    <div class="alert alert-${adventure.status === 'completed' ? 'success' : 'warning'}">
+      <h5>Adventure ${adventure.status === 'completed' ? 'Completed!' : 'Ended'}</h5>
+      <p>${adventure.status === 'completed' ? 'You have completed your adventure and earned rewards!' : 'Your adventure has ended. Collect your rewards.'}</p>
+    </div>
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5>Rewards</h5>
+      </div>
+      <div class="card-body">
+        <p><strong>Experience:</strong> ${adventure.rewards.experience}</p>
+        <p><strong>Gold:</strong> ${adventure.rewards.gold}</p>
+        <p><strong>Items:</strong> ${adventure.rewards.items.length}</p>
+        <button id="collect-adventure-rewards-btn" class="btn btn-primary" data-adventure-id="${adventure.id}">
+          Collect Rewards
+        </button>
+      </div>
+    </div>
+  `;
+  
+  rewardsContainer.innerHTML = html;
+  
+  // Add event listener to collect button
+  const collectBtn = document.getElementById('collect-adventure-rewards-btn');
+  if (collectBtn) {
+    collectBtn.addEventListener('click', () => this.collectAdventureRewards(adventure.id));
+  }
+} 
+  
+  // In app/public/js/controllers/adventure-controller.js - Complete collectAdventureRewards function
+async collectAdventureRewards(adventureId) {
+  try {
+    const result = await window.API.collectAdventureRewards(adventureId);
+    
+    // Update character data if needed
+    if (result.character) {
+      window.GameState.updateCharacter(result.character);
+      window.CharacterUI.renderCharacterDetails(result.character);
+    }
+    
+    // Show success message
+    window.Notification.success('Rewards collected successfully!');
+    
+    // Refresh adventure data to show start new adventure UI
+    this.loadAdventureData();
+  } catch (error) {
+    console.error('Error collecting rewards:', error);
+    window.Notification.error(error.message || 'Failed to collect rewards');
+  }
+}
+  
+  // In app/public/js/controllers/adventure-controller.js - Complete formatAdventureEvents function
+formatAdventureEvents(events) {
+  // Sort events by time, newest first
+  const sortedEvents = [...events].sort((a, b) => {
+    return new Date(b.time) - new Date(a.time);
+  });
+  
+  return sortedEvents.map(event => {
+    const timeStamp = new Date(event.time).toLocaleString();
+    
+    let eventClass = '';
+    switch(event.type) {
+      case 'gold_find': eventClass = 'text-warning'; break;
+      case 'exp_gain': eventClass = 'text-info'; break;
+      case 'item_find': eventClass = 'text-primary'; break;
+      case 'battle_win': eventClass = 'text-success'; break;
+      case 'battle_loss': eventClass = 'text-danger'; break;
+      case 'adventure_end': eventClass = 'text-dark fw-bold'; break;
+    }
+    
+    return `
+      <div class="adventure-log-entry mb-2 p-2 border-bottom">
+        <div class="adventure-log-time small text-muted">${timeStamp}</div>
+        <div class="adventure-log-message ${eventClass}">${event.description}</div>
+      </div>
+    `;
+  }).join('');
+}
+  
+// In app/public/js/controllers/adventure-controller.js - Complete startAdventureTimer function
+startAdventureTimer(adventure, initialServerTime) {
+  // Clear any existing timer
+  if (this.adventureTimer) {
+    clearInterval(this.adventureTimer);
+  }
+  
+  // Record when we received this server time
+  const serverTimeReceivedAt = new Date();
+  
+  // Get time values
+  const startTime = new Date(adventure.startTime);
+  const endTime = new Date(adventure.endTime);
+  const totalDurationMs = endTime - startTime;
+  
+  // Set timer to update every second
+  this.adventureTimer = setInterval(() => {
+    // Calculate how much time has passed since we got the server time
+    const now = new Date();
+    const elapsedSinceServerTime = now - serverTimeReceivedAt;
+    
+    // Estimate current server time by adding elapsed time since last server time
+    const estimatedServerTime = new Date(initialServerTime.getTime() + elapsedSinceServerTime);
+    
+    // Calculate remaining time based on estimated server time
+    const remainingMs = Math.max(0, endTime - estimatedServerTime);
+    const remainingTimePercentage = Math.min(100, Math.max(0, Math.floor((remainingMs / totalDurationMs) * 100)));
+    
+    // Update time remaining
+    const timeRemainingElement = document.getElementById('adventure-time-remaining');
+    if (timeRemainingElement) {
+      if (remainingMs <= 0) {
+        timeRemainingElement.textContent = 'Complete!';
+        this.checkAdventureCompletion();
+        clearInterval(this.adventureTimer);
+      } else {
+        timeRemainingElement.textContent = this.formatTimeRemaining(remainingMs);
+      }
+    }
+    
+    // Update progress bar
+    const progressBar = document.getElementById('adventure-progress-bar');
+    if (progressBar) {
+      progressBar.style.width = `${remainingTimePercentage}%`;
+      progressBar.setAttribute('aria-valuenow', remainingTimePercentage);
+    }
+  }, 1000);
+}
   
     startAdventurePolling() {
     // Clear existing poll
@@ -281,19 +408,20 @@ class AdventureController {
    * @param {number} ms - Milliseconds
    * @returns {string} Formatted time string
    */
-  formatTimeRemaining(ms) {
-    // Convert to seconds
-    let totalSeconds = Math.floor(ms / 1000);
-    
-    // Extract hours, minutes, seconds
-    const hours = Math.floor(totalSeconds / 3600);
-    totalSeconds %= 3600;
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    
-    // Format as hh:mm:ss
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }
+// In app/public/js/controllers/adventure-controller.js - Complete formatTimeRemaining function
+formatTimeRemaining(ms) {
+  // Convert to seconds
+  let totalSeconds = Math.floor(ms / 1000);
+  
+  // Extract hours, minutes, seconds
+  const hours = Math.floor(totalSeconds / 3600);
+  totalSeconds %= 3600;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  
+  // Format as hh:mm:ss
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
     
     updateAdventureTimeDisplay(data) {
     if (!data.active || !data.timing) return;
@@ -492,34 +620,36 @@ class AdventureController {
     /**
      * Check if adventure is complete and update UI accordingly
      */
-    async checkAdventureCompletion() {
-      if (!window.GameState.selectedCharacter) return;
+// In app/public/js/controllers/adventure-controller.js - Complete checkAdventureCompletion function
+async checkAdventureCompletion() {
+  if (!window.GameState.selectedCharacter) return;
+  
+  try {
+    const adventureStatus = await window.API.getAdventureStatus(window.GameState.selectedCharacter.id);
+    
+    if (!adventureStatus.active && adventureStatus.hasPendingRewards) {
+      // Adventure completed while we were checking
+      this.updateAdventureStatus(adventureStatus);
       
-      try {
-        const adventureStatus = await window.API.getAdventureStatus(window.GameState.selectedCharacter.id);
-        
-        if (adventureStatus && adventureStatus.isCompleted) {
-          // Adventure completed while we were checking
-          this.updateAdventureStatus(adventureStatus);
-          
-          // Show completion notification
-          window.Notification.success('Your adventure has completed!');
-          
-          // Clear the timer
-          if (this.adventureTimer) {
-            clearInterval(this.adventureTimer);
-            this.adventureTimer = null;
-          }
-        }
-      } catch (error) {
-        console.error('Error checking adventure completion:', error);
+      // Show completion notification
+      window.Notification.success('Your adventure has completed!');
+      
+      // Clear the timer
+      if (this.adventureTimer) {
+        clearInterval(this.adventureTimer);
+        this.adventureTimer = null;
       }
     }
+  } catch (error) {
+    console.error('Error checking adventure completion:', error);
+  }
+}
   
     /**
      * Update adventure log display
      * @param {Object} adventureStatus - Current adventure status
      */
+// In app/public/js/controllers/adventure-controller.js - Complete updateAdventureLog function
 updateAdventureLog(adventureStatus) {
   const logContainer = document.getElementById('adventure-log');
   if (!logContainer) return;

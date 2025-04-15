@@ -51,6 +51,7 @@ router.get('/character/:characterId', authCheck, (req, res) => {
   }
 });
 
+// In app/routes/adventures.js - Complete GET active/:characterId endpoint
 router.get('/active/:characterId', authCheck, (req, res) => {
   try {
     const characterId = req.params.characterId;
@@ -63,18 +64,30 @@ router.get('/active/:characterId', authCheck, (req, res) => {
       return res.status(404).json({ error: 'Character not found' });
     }
     
-    // Find any adventure for this character
+    // Find any active adventure for this character
     const adventures = readDataFile('adventures.json');
-    
-    // Find the active adventure - checking both status field and isCompleted for compatibility
-    const adventure = adventures.find(adv => 
+    const activeAdventure = adventures.find(adv => 
       adv.characterId === characterId && 
-      ((adv.status === 'active' || adv.status === undefined) && 
-       (adv.isCompleted === false || adv.isCompleted === undefined))
+      adv.status === 'active'
     );
     
-    if (!adventure) {
-      return res.json({ 
+    if (!activeAdventure) {
+      // Check if there are any completed adventures that need collecting
+      const pendingAdventures = adventures.filter(adv => 
+        adv.characterId === characterId && 
+        (adv.status === 'completed' || adv.status === 'failed')
+      );
+      
+      if (pendingAdventures.length > 0) {
+        return res.json({
+          active: false,
+          hasPendingRewards: true,
+          serverTime: new Date().toISOString(),
+          pendingAdventure: pendingAdventures[0] // Send the first pending adventure
+        });
+      }
+      
+      return res.json({
         active: false,
         serverTime: new Date().toISOString()
       });
@@ -82,20 +95,25 @@ router.get('/active/:characterId', authCheck, (req, res) => {
     
     // Get current time
     const now = new Date();
-    const endTime = new Date(adventure.endTime);
-    const isExpired = now >= endTime;
+    const endTime = new Date(activeAdventure.endTime);
     
-    if (isExpired) {
-      // Adventure has ended by time, mark it as inactive
+    // Check if adventure has ended by time
+    if (now >= endTime) {
+      // If adventure has ended by time but status hasn't been updated,
+      // update it here to ensure consistency
+      const updatedAdventure = adventureService.checkAdventureStatus(activeAdventure.id);
+      
       return res.json({
         active: false,
-        serverTime: now.toISOString()
+        hasPendingRewards: true,
+        serverTime: now.toISOString(),
+        pendingAdventure: updatedAdventure
       });
     }
     
     // Adventure is still active
     // Check adventure status and process any pending events
-    const updatedAdventure = adventureService.updateAdventure(adventure.id, character);
+    const updatedAdventure = adventureService.updateAdventure(activeAdventure.id, character);
     
     // Calculate timing information
     const startTime = new Date(updatedAdventure.startTime);

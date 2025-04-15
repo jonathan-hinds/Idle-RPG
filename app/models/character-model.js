@@ -332,6 +332,31 @@ function updateCharacterWithEquipment(characterId) {
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+/**
+ * Add gold to a character
+ * @param {string} characterId - Character ID
+ * @param {number} amount - Amount of gold to add
+ * @returns {Object} Updated character
+ */
+function addGold(characterId, amount) {
+  const characters = readDataFile('characters.json');
+  const characterIndex = characters.findIndex(c => c.id === characterId);
+  
+  if (characterIndex === -1) {
+    throw new Error(`Character not found: ${characterId}`);
+  }
+  
+  // Initialize gold if it doesn't exist
+  if (characters[characterIndex].gold === undefined) {
+    characters[characterIndex].gold = 0;
+  }
+  
+  characters[characterIndex].gold += amount;
+  writeDataFile('characters.json', characters);
+  
+  return characters[characterIndex];
+}
 module.exports = {
   calculateStats,
   calculateLevel,
@@ -342,5 +367,6 @@ module.exports = {
   levelUpCharacter,
   applyPendingLevelUps,
   calculateBattleExperience,
-  updateCharacterWithEquipment  
+  updateCharacterWithEquipment,
+  addGold  
 };
