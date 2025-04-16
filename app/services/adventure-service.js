@@ -52,7 +52,7 @@ function getAdventureConfig() {
         min: 5,   // 5 seconds for testing
         max: 15   // 15 seconds for testing
       },
-      use_testing_values: false // Set to true to use faster values for testing
+      use_testing_values: true // Set to true to use faster values for testing
     };
     
     console.log("Using default adventure config:", defaultConfig);
@@ -106,10 +106,18 @@ function getAdventureEvents() {
  * Load all adventures from data file
  * @returns {Array} Array of adventure objects
  */
+// In app/services/adventure-service.js
 function loadAdventures() {
-  if (adventureCache) return adventureCache;
-  adventureCache = readDataFile('adventures.json');
-  return adventureCache;
+  // Always clear the cache when explicitly loading adventures
+  adventureCache = null;
+  try {
+    const adventures = readDataFile('adventures.json');
+    adventureCache = adventures;
+    return adventures;
+  } catch (error) {
+    console.error("Error loading adventures from file:", error);
+    return [];
+  }
 }
 
 /**
@@ -124,9 +132,27 @@ function clearAdventureCache() {
  * @param {string} adventureId - Adventure ID
  * @returns {Object|null} Adventure or null if not found
  */
+// In app/services/adventure-service.js
 function getAdventure(adventureId) {
+  console.log(`getAdventure called for ID: ${adventureId}`);
+  
+  if (!adventureId) {
+    console.error("getAdventure called with null or undefined adventureId");
+    return null;
+  }
+  
   const adventures = loadAdventures();
-  return adventures.find(adv => adv.id === adventureId) || null;
+  console.log(`Total adventures loaded: ${adventures.length}`);
+  
+  const adventure = adventures.find(adv => adv.id === adventureId);
+  if (!adventure) {
+    console.log(`No adventure found with ID: ${adventureId}`);
+    console.log(`Available adventure IDs: ${adventures.map(a => a.id).join(', ')}`);
+  } else {
+    console.log(`Found adventure with ID: ${adventureId}, status: ${adventure.status}`);
+  }
+  
+  return adventure;
 }
 
 /**
@@ -578,13 +604,23 @@ function processItemFindEvent(adventure) {
  * @param {string} adventureId - Adventure ID
  * @returns {Object} Updated adventure
  */
-// In app/services/adventure-service.js - Complete checkAdventureStatus function
+// In app/services/adventure-service.js
 function checkAdventureStatus(adventureId) {
+  console.log(`checkAdventureStatus called for ID: ${adventureId}`);
+  
+  if (!adventureId) {
+    console.error("checkAdventureStatus called with null or undefined adventureId");
+    return null;
+  }
+  
   const adventure = getAdventure(adventureId);
   
   if (!adventure) {
-    throw new Error('Adventure not found');
+    console.log(`Adventure not found in checkAdventureStatus for ID: ${adventureId}`);
+    return null;
   }
+  
+  console.log(`Adventure found, status: ${adventure.status}`);
   
   // If not active, no need to check
   if (adventure.status !== 'active') {
@@ -592,28 +628,9 @@ function checkAdventureStatus(adventureId) {
   }
   
   // Check if adventure has ended
-  const now = new Date();
-  const endTime = new Date(adventure.endTime);
-  
-  if (now >= endTime || adventure.currentHealth <= 0) {
-    // Adventure has ended, update status
+  if (adventureModel.isAdventureEnded(adventure)) {
     const reason = adventure.currentHealth <= 0 ? 'death' : 'success';
-    adventure.status = reason === 'death' ? 'failed' : 'completed';
-    
-    // Add end event if not already present
-    if (!adventure.events.some(e => e.type === 'adventure_end')) {
-      adventure = adventureModel.recordEvent(
-        adventure,
-        'adventure_end',
-        reason === 'death' 
-          ? 'Adventure failed due to death.' 
-          : `Adventure completed successfully! Earned ${adventure.rewards.gold} gold, ${adventure.rewards.experience} exp, and ${adventure.rewards.items.length} items.`,
-        {
-          reason,
-          rewards: { ...adventure.rewards }
-        }
-      );
-    }
+    adventureModel.completeAdventure(adventure, reason);
     
     // Save updated adventure
     const adventures = loadAdventures();
@@ -640,11 +657,21 @@ function checkAdventureStatus(adventureId) {
  * @param {Object} character - Character data
  * @returns {Object} Updated adventure
  */
+// In app/services/adventure-service.js
 function updateAdventure(adventureId, character) {
+  console.log(`updateAdventure called for ID: ${adventureId}`);
+  
+  if (!adventureId) {
+    console.error("updateAdventure called with null or undefined adventureId");
+    return null;
+  }
+  
+  // Always get fresh data to prevent race conditions
   let adventure = getAdventure(adventureId);
   
   if (!adventure) {
-    throw new Error('Adventure not found');
+    console.error(`Adventure not found in updateAdventure for ID: ${adventureId}`);
+    return null;
   }
   
   // If not active, no need to update

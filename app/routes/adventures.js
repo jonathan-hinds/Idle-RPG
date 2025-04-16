@@ -149,12 +149,21 @@ router.get('/active/:characterId', authCheck, (req, res) => {
  * Get specific adventure by ID
  * GET /api/adventures/:id
  */
+// In app/routes/adventures.js
 router.get('/:id', authCheck, (req, res) => {
   try {
     const adventureId = req.params.id;
+    
+    if (!adventureId) {
+      return res.status(400).json({ error: 'Invalid adventure ID' });
+    }
+    
+    console.log(`Route: GET /api/adventures/${adventureId}`);
+    
     const adventure = adventureService.getAdventure(adventureId);
     
     if (!adventure) {
+      console.log(`Route handler: No adventure found with ID: ${adventureId}`);
       return res.status(404).json({ error: 'Adventure not found' });
     }
     
@@ -168,8 +177,13 @@ router.get('/:id', authCheck, (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
     
-    // Check adventure status
+    // Check adventure status - handle null response from checkAdventureStatus
     const updatedAdventure = adventureService.checkAdventureStatus(adventureId);
+    
+    if (!updatedAdventure) {
+      console.log(`Route handler: checkAdventureStatus returned null for ID: ${adventureId}`);
+      return res.status(404).json({ error: 'Adventure not found or cannot be processed' });
+    }
     
     res.json(updatedAdventure);
   } catch (error) {
