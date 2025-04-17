@@ -339,6 +339,99 @@ function randomInt(min, max) {
 }
 
 /**
+ * Process a gold find event
+ * @param {Object} adventure - Adventure state
+ * @param {Object} eventConfig - Adventure events configuration
+ * @returns {Object} Updated adventure
+ */
+function processGoldFindEvent(adventure, eventConfig) {
+  // Get gold config from event config
+  const goldConfig = eventConfig.gold_rewards || {
+    small: { chance: 70, min_amount: 30, max_amount: 70 },
+    large: { chance: 30, min_multiplier: 2, max_multiplier: 4 }
+  };
+  
+  // Determine if this is a large gold find
+  const isLargeGold = Math.random() * 100 < goldConfig.large.chance;
+  
+  let amount;
+  if (isLargeGold) {
+    // Large gold - base amount with multiplier
+    const baseAmount = randomInt(goldConfig.small.min_amount, goldConfig.small.max_amount);
+    const multiplier = randomInt(goldConfig.large.min_multiplier, goldConfig.large.max_multiplier);
+    amount = baseAmount * multiplier;
+  } else {
+    // Small gold - just base amount
+    amount = randomInt(goldConfig.small.min_amount, goldConfig.small.max_amount);
+  }
+  
+  // Add to adventure rewards
+  adventure.rewards.gold += amount;
+  
+  // Create event description
+  const eventDescription = isLargeGold 
+    ? `Found a treasure chest with ${amount} gold!` 
+    : `Found ${amount} gold coins.`;
+  
+  // Record the event
+  return adventureModel.recordEvent(adventure, 'gold_find', eventDescription, {
+    amount,
+    isLargeAmount: isLargeGold
+  });
+}
+
+/**
+ * Process an experience gain event
+ * @param {Object} adventure - Adventure state
+ * @param {Object} character - Character data
+ * @param {Object} eventConfig - Adventure events configuration
+ * @returns {Object} Updated adventure
+ */
+function processExpGainEvent(adventure, character, eventConfig) {
+  const { calculateExpForNextLevel } = require('../models/character-model');
+  
+  // Get exp config from event config
+  const expConfig = eventConfig.exp_rewards || {
+    small: { chance: 70, min_percentage: 0.03, max_percentage: 0.07 },
+    large: { chance: 30, min_percentage: 0.08, max_percentage: 0.12 }
+  };
+  
+  // Determine if this is a large exp gain
+  const isLargeExp = Math.random() * 100 < expConfig.large.chance;
+  
+  // Get base exp needed for next level
+  const expForNextLevel = calculateExpForNextLevel(character.level);
+  
+  // Calculate percentage based on size (small or large)
+  let percentage;
+  if (isLargeExp) {
+    percentage = expConfig.large.min_percentage + 
+      Math.random() * (expConfig.large.max_percentage - expConfig.large.min_percentage);
+  } else {
+    percentage = expConfig.small.min_percentage + 
+      Math.random() * (expConfig.small.max_percentage - expConfig.small.min_percentage);
+  }
+  
+  // Calculate final exp amount
+  const amount = Math.floor(expForNextLevel * percentage);
+  
+  // Add to adventure rewards
+  adventure.rewards.experience += amount;
+  
+  // Create event description
+  const eventDescription = isLargeExp 
+    ? `Gained significant insight! (${amount} exp)` 
+    : `Gained some experience. (${amount} exp)`;
+  
+  // Record the event
+  return adventureModel.recordEvent(adventure, 'exp_gain', eventDescription, {
+    amount,
+    isLargeAmount: isLargeExp
+  });
+}
+
+
+/**
  * Process adventure event
  * @param {Object} adventure - Adventure state
  * @param {Object} character - Character data
@@ -356,7 +449,7 @@ function processAdventureEvent(adventure, character) {
   let eventType;
   let cumulative = 0;
   
-  // Default event chances if config is missing
+  // Get event chances from config
   const eventChances = eventConfig.event_chances || {
     battle: 35,
     gold_find: 30,
@@ -377,49 +470,27 @@ function processAdventureEvent(adventure, character) {
   
   console.log(`[Event Generation] Selected event type: ${eventType}`);
   
-  // For now, let's temporarily force an event type for testing
-  // This ensures we're at least generating some events
-  if (adventure.events.length === 0) {
-    // First event is always gold to ensure something happens
-    eventType = 'gold_find';
-    console.log('[Event Generation] Forcing first event to be gold_find for testing');
-  } else if (adventure.events.length % 4 === 1) {
-    // Every 4th event (after the first) is exp
-    eventType = 'exp_gain';
-    console.log('[Event Generation] Forcing exp_gain event for testing');
-  } else if (adventure.events.length % 4 === 2) {
-    // Every 4th event (after the second) is item
-    eventType = 'item_find';
-    console.log('[Event Generation] Forcing item_find event for testing');
-  }
-  
-  // Process the event
+  // Process the event based on the randomly selected type
   let updatedAdventure;
   switch (eventType) {
     case 'battle':
       console.log('[Event Generation] Processing battle event');
-      // For now, we'll skip battle processing and just record a gold event instead
-      // This is temporary until battle mechanics are fully implemented
-      updatedAdventure = adventureModel.processGoldFind(adventure, true);
+      updatedAdventure = processBattleEvent(adventure, character);
       break;
     
     case 'gold_find':
       console.log('[Event Generation] Processing gold find event');
-      // 30% chance for large gold amount
-      const isLargeGold = Math.random() < 0.3;
-      updatedAdventure = adventureModel.processGoldFind(adventure, isLargeGold);
+      updatedAdventure = processGoldFindEvent(adventure, eventConfig);
       break;
     
     case 'exp_gain':
       console.log('[Event Generation] Processing exp gain event');
-      // 30% chance for large exp amount
-      const isLargeExp = Math.random() < 0.3;
-      updatedAdventure = adventureModel.processExpGain(adventure, character, isLargeExp);
+      updatedAdventure = processExpGainEvent(adventure, character, eventConfig);
       break;
     
     case 'item_find':
       console.log('[Event Generation] Processing item find event');
-      updatedAdventure = processItemFindEvent(adventure);
+      updatedAdventure = processItemFindEvent(adventure, eventConfig);
       break;
     
     default:
@@ -534,12 +605,8 @@ function createOpponent(character, difficulty) {
  * @param {Object} adventure - Adventure state
  * @returns {Object} Updated adventure
  */
-function processItemFindEvent(adventure) {
-  const eventConfig = getAdventureEvents();
-  
-  console.log('[Item Find] Processing item find event');
-  
-  // Default item rarity chances if config is missing
+function processItemFindEvent(adventure, eventConfig) {
+  // Get item rarity chances from config
   const rarityChances = eventConfig.item_rarity_chances || {
     Common: 60,
     Uncommon: 25,
@@ -547,6 +614,8 @@ function processItemFindEvent(adventure) {
     Epic: 4,
     Legendary: 1
   };
+  
+  console.log('[Item Find] Processing item find event');
   
   // Roll for item rarity
   const rarityRoll = Math.random() * 100;
@@ -596,7 +665,7 @@ function processItemFindEvent(adventure) {
   }
   
   console.log(`[Item Find] Found item: ${item.name} (${rarity})`);
-  return adventureModel.processItemFind(adventure, item.id, item.name, rarity);
+  return adventureModel.processItemFind(adventure, item.id, item.name, item.rarity || rarity);
 }
 
 /**
