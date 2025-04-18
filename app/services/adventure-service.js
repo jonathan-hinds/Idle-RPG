@@ -7,7 +7,7 @@ const adventureModel = require('../models/adventure-model');
 const itemService = require('./item-service');
 const battleService = require('./battle-service');
 const { createBattleState } = require('../models/character-model');
-
+const challengeService = require('./challenge-service');
 let adventureCache = null;
 let configCache = null;
 let eventsCache = null;
@@ -264,9 +264,14 @@ function startAdventure(characterId, duration) {
       items: []
     },
     nextEventTime: new Date(now + firstEventDelayMs).toISOString(),
-    currentHealth: character.stats.health, // Use character's actual health
-    maxHealth: character.stats.health,     // Use character's max health
-    createdAt: new Date(now).toISOString()
+    currentHealth: character.stats.health,
+    maxHealth: character.stats.health,
+    createdAt: new Date(now).toISOString(),
+    battleMemory: {
+      geneticMemory: [],
+      battleCount: 0
+    },
+    enemiesDefeated: 0
   };
   
   console.log("Created adventure:", adventure);
@@ -515,6 +520,9 @@ function processAdventureEvent(adventure, character) {
  * @returns {Object} Updated adventure
  */
 function processBattleEvent(adventure, character) {
+  // Initialize battle memory if needed
+  adventure = adventureModel.initializeBattleMemory(adventure);
+  
   // Record the encounter
   adventure = adventureModel.recordEvent(
     adventure, 
@@ -523,11 +531,27 @@ function processBattleEvent(adventure, character) {
     {}
   );
   
-  // Create an opponent appropriate for the character's level
-  // Using the same mechanism as challenge mode but simplified
-  const opponent = createOpponent(character, adventure.enemiesDefeated + 1);
+  let opponent;
   
-  // Ensure the opponent has a rotation
+  // Generate opponent based on battle memory
+  if (adventure.battleMemory.geneticMemory.length > 0) {
+    // Use challenge service to evolve opponent based on previous battles
+    opponent = challengeService.generateOpponent(
+      `Wilderness Foe (Lvl ${adventure.battleMemory.battleCount + 1})`,
+      adventure.battleMemory.geneticMemory,
+      character.attributes,
+      adventure.battleMemory.battleCount + 1
+    );
+  } else {
+    // First battle - create random opponent
+    opponent = challengeService.createRandomOpponent(
+      `Wilderness Foe (Lvl 1)`, 
+      Object.values(character.attributes).reduce((sum, val) => sum + val, 0),
+      character.level || 1
+    );
+  }
+  
+  // Ensure opponent has a rotation
   if (!opponent.rotation || opponent.rotation.length < 3) {
     const abilities = require('./ability-service').loadAbilities();
     opponent.rotation = abilities
@@ -547,6 +571,9 @@ function processBattleEvent(adventure, character) {
   // Simulate the battle
   const battleResult = battleService.simulateBattle(charCopy, opponentCopy, false);
   
+  // Update battle memory with this battle's data
+  adventure = adventureModel.updateBattleMemory(adventure, opponent, battleResult, character);
+  
   // Process battle result
   adventure = adventureModel.processBattleResult(adventure, battleResult, character, opponent);
   
@@ -557,7 +584,7 @@ function processBattleEvent(adventure, character) {
   
   // Schedule next event
   const config = getAdventureConfig();
-  adventure.nextEventTime = adventureModel.calculateNextEventTime(adventure, config).toISOString();
+  adventure.nextEventTime = calculateNextEventTime(new Date(), config);
   
   return adventure;
 }
@@ -694,6 +721,11 @@ function checkAdventureStatus(adventureId) {
   // If not active, no need to check
   if (adventure.status !== 'active') {
     return adventure;
+  }
+  
+  // Ensure battle memory is initialized
+  if (!adventure.battleMemory) {
+    adventure = adventureModel.initializeBattleMemory(adventure);
   }
   
   // Check if adventure has ended

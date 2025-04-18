@@ -45,6 +45,88 @@ function calculateEndTime(adventure, config) {
   return new Date(startTime.getTime() + durationMs);
 }
 
+function initializeBattleMemory(adventure) {
+  if (!adventure.battleMemory) {
+    adventure.battleMemory = {
+      geneticMemory: [],
+      battleCount: 0
+    };
+  }
+  return adventure;
+}
+
+function updateBattleMemory(adventure, opponent, battleResult, character) {
+  if (!adventure.battleMemory) {
+    adventure = initializeBattleMemory(adventure);
+  }
+  
+  adventure.battleMemory.battleCount++;
+  
+  // Calculate fitness similar to challenge mode
+  const fitness = calculateOpponentFitness(opponent, character, battleResult);
+  
+  // Store opponent data for genetic algorithm
+  adventure.battleMemory.geneticMemory.push({
+    attributes: opponent.attributes,
+    rotation: opponent.rotation,
+    attackType: opponent.attackType,
+    equipment: opponent.equipment || {},
+    fitness: fitness
+  });
+  
+  // Keep only the most recent battles for memory efficiency
+  if (adventure.battleMemory.geneticMemory.length > 5) {
+    adventure.battleMemory.geneticMemory.shift();
+  }
+  
+  return adventure;
+}
+
+function calculateOpponentFitness(opponent, character, battleResult) {
+  const isWinner = battleResult.winner === opponent.id;
+  let playerHealthPercent = 0;
+  let opponentHealthPercent = 0;
+  
+  // Extract health percentages from battle log
+  const finalStateEntries = battleResult.log.filter(entry => 
+    entry.message.includes('Final state'));
+  
+  finalStateEntries.forEach(entry => {
+    if (entry.message.includes(character.name)) {
+      const match = entry.message.match(/(\d+) health/);
+      if (match) {
+        playerHealthPercent = parseInt(match[1]) / character.stats.health * 100;
+      }
+    }
+    if (entry.message.includes(opponent.name)) {
+      const match = entry.message.match(/(\d+) health/);
+      if (match) {
+        opponentHealthPercent = parseInt(match[1]) / opponent.stats.health * 100;
+      }
+    }
+  });
+  
+  // Calculate fitness score
+  let fitness = 0;
+  
+  if (isWinner) {
+    fitness += 1000; // Large bonus for winning
+  }
+  
+  // Reward for damaging player
+  fitness += (100 - playerHealthPercent) * 5;
+  
+  // Reward for surviving
+  if (opponentHealthPercent > 0) {
+    fitness += opponentHealthPercent * 2;
+  }
+  
+  // Small bonus for longer battles
+  fitness += battleResult.log.length * 0.5;
+  
+  return fitness;
+}
+
 /**
  * Calculate the next event time
  * @param {Object} adventure - Adventure state
@@ -342,6 +424,10 @@ function getFormattedElapsedTime(adventure) {
 }
 
 module.exports = {
+  initializeBattleMemory,
+  updateBattleMemory,
+  calculateOpponentFitness,
+  initializeBattleMemory,
   createAdventureState,
   calculateEndTime,
   calculateNextEventTime,
