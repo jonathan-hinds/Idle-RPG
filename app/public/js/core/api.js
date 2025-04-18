@@ -297,9 +297,18 @@ async startChallengeBattle(characterId) {
    * @param {string} characterId - Character ID
    * @returns {Promise<Array>} List of character adventures
    */
-  async getAdventureHistory(characterId) {
-    return this._request(`/api/adventures/character/${characterId}`);
+// In app/public/js/core/api.js
+async getAdventureHistory(characterId) {
+  try {
+    console.log(`API: Getting adventure history for character ${characterId}`);
+    const result = await this._request(`/api/adventures/character/${characterId}`);
+    console.log(`API: Received ${result.length} adventures in history`);
+    return result;
+  } catch (error) {
+    console.error(`API: Error getting adventure history: ${error.message}`);
+    throw error;
   }
+}
   
   /**
    * Get active adventure for a character
@@ -427,6 +436,45 @@ async unequipItem(characterId, slot) {
   return this._request('/api/items/unequip', {
     method: 'POST',
     body: JSON.stringify({ characterId, slot })
+  });
+}
+  
+  /**
+ * Get all materials
+ * @returns {Promise<Array>} List of materials
+ */
+// For app/public/js/core/api.js
+async getMaterials() {
+  try {
+    console.log("Calling materials API endpoint");
+    const materials = await this._request('/api/materials');
+    console.log("API response for materials:", materials);
+    window.GameState.setMaterials(materials);
+    return materials;
+  } catch (error) {
+    console.error("Error fetching materials:", error);
+    return [];
+  }
+}
+
+/**
+ * Get material bank for current player
+ * @returns {Promise<Object>} Material bank data
+ */
+async getMaterialBank() {
+  return this._request(`/api/materials/bank/${window.GameState.playerId}`);
+}
+
+/**
+ * Add material to player's bank
+ * @param {string} materialId - Material ID to add
+ * @param {number} amount - Amount to add (default: 1)
+ * @returns {Promise<Object>} Result
+ */
+async addMaterialToBank(materialId, amount = 1) {
+  return this._request('/api/materials/bank/add', {
+    method: 'POST',
+    body: JSON.stringify({ materialId, amount })
   });
 }
 }

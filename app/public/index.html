@@ -99,7 +99,10 @@
             
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="adventure-tab" data-bs-toggle="tab" data-bs-target="#adventure" type="button" role="tab" aria-controls="adventure" aria-selected="false">Adventure</button>
-            </li>            
+            </li> 
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="material-tab" data-bs-toggle="tab" data-bs-target="#material" type="button" role="tab" aria-controls="material" aria-selected="false">Material Bank</button>
+            </li>
           </ul>
         </div>
         <div class="card-body">
@@ -291,6 +294,10 @@
       </div>
     </div>
   </div>
+</div>   
+<div class="tab-pane fade" id="material" role="tabpanel" aria-labelledby="material-tab">
+  <h4>Material Bank</h4>
+  <div id="material-bank"></div>
 </div>            
 <!-- Rotation Tab -->
 <div class="tab-pane fade" id="rotation" role="tabpanel" aria-labelledby="rotation-tab">
@@ -498,7 +505,7 @@
         <h5>Adventure History</h5>
       </div>
       <div class="card-body">
-        <div id="adventure-history-list">
+        <div id="adventure-history">
           <!-- Adventure history will be shown here -->
           <p class="text-muted">No past adventures.</p>
         </div>
@@ -526,14 +533,31 @@
 </div>
 <!-- Shop Tab -->
 <div class="tab-pane fade" id="shop" role="tabpanel" aria-labelledby="shop-tab">
-  <h4>Item Shop</h4>
-  <p>Buy equipment to enhance your character's abilities in battle.</p>
+  <h4>Shop</h4>
   
-  <div id="shop-items-list">
-    <!-- Shop items will be shown here -->
-    <div class="alert alert-info">Loading shop items...</div>
+  <ul class="nav nav-tabs mb-3" id="shop-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="shop-items-tab" data-bs-toggle="tab" data-bs-target="#shop-items" type="button" role="tab" aria-controls="shop-items" aria-selected="true">Items</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="shop-materials-tab" data-bs-toggle="tab" data-bs-target="#shop-materials" type="button" role="tab" aria-controls="shop-materials" aria-selected="false">Materials</button>
+    </li>
+  </ul>
+  
+  <div class="tab-content" id="shop-tabs-content">
+    <div class="tab-pane fade show active" id="shop-items" role="tabpanel" aria-labelledby="shop-items-tab">
+      <div id="shop-items-list">
+        <!-- Shop items will be shown here -->
+      </div>
+    </div>
+    
+    <div class="tab-pane fade" id="shop-materials" role="tabpanel" aria-labelledby="shop-materials-tab">
+      <div id="shop-materials-list">
+        <!-- Shop materials will be shown here -->
+      </div>
+    </div>
   </div>
-</div>            
+</div>          
             
             
             
@@ -776,6 +800,7 @@
 <script src="js/ui/challenge-ui.js"></script> <!-- Make sure this is here -->
   <script src="js/ui/item-ui.js"></script> <!-- NEW LINE -->
   <script src="js/ui/adventure-ui.js"></script>
+  <script src="js/ui/material-ui.js"></script>
 
 <!-- Controllers -->
 <script src="js/controllers/character-controller.js"></script>

@@ -2,6 +2,19 @@ body {
   font-family: 'Arial', sans-serif;
   background-color: #f5f5f5;
 }
+/* Material styling */
+.material-item {
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #f8f9fa;
+  border-left: 3px solid #6c757d;
+}
+
+.material-item.legendary { border-left-color: #ffc107; }
+.material-item.epic { border-left-color: #9c27b0; }
+.material-item.rare { border-left-color: #007bff; }
+.material-item.uncommon { border-left-color: #28a745; }
 
 .container {
   max-width: 1200px;
@@ -11,6 +24,11 @@ body {
   margin-top: 20px;
   margin-bottom: 20px;
   border-radius: 8px;
+}
+
+.adventure-log-entry .border-danger {
+  background-color: rgba(220, 53, 69, 0.05);
+  border-radius: 4px;
 }
 
 .stun-icon {

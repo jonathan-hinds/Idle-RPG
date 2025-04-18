@@ -69,6 +69,7 @@ _initUI() {
   window.ChallengeUI = new ChallengeUI();
   window.ItemUI = new ItemUI();
   window.AdventureUI = new AdventureUI();
+  window.MaterialUI = new MaterialUI();
 }
   /**
    * Initialize controllers
@@ -111,11 +112,28 @@ _initControllers() {
   /**
    * Handle successful login
    */
+// For app/public/js/app.js - Fixed _onLoginSuccess method
 async _onLoginSuccess() {
   console.log('Login successful, loading data');
   try {
     await window.API.getItems();
-    await window.CharacterController.loadCharacters();
+    // Load materials before or after characters, but ensure characters are still loaded properly
+    const materialsPromise = window.API.getMaterials();
+    const charactersPromise = window.CharacterController.loadCharacters();
+    
+    // Wait for both to complete
+    await Promise.all([materialsPromise, charactersPromise]);
+    
+    // Load material bank after everything else
+    if (window.GameState.playerId) {
+      try {
+        const bank = await window.API.getMaterialBank();
+        window.GameState.setMaterialBank(bank);
+      } catch (error) {
+        // Don't let material bank errors prevent the game from loading
+        console.error('Error loading material bank:', error);
+      }
+    }
   } catch (error) {
     console.error('Error initializing game data:', error);
     window.Notification.error('Failed to load game data');

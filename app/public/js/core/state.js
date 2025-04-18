@@ -23,6 +23,25 @@ reset() {
   this.inventory = null;
   this.adventure = null;
   this.adventures = [];
+    this.materials = [];
+  this.materialBank = null;
+}
+  /**
+ * Set the materials list
+ * @param {Array} materials - List of materials
+ */
+setMaterials(materials) {
+  this.materials = materials;
+  window.EventBus.publish('materials:loaded', materials);
+}
+
+/**
+ * Set the player's material bank
+ * @param {Object} bank - Material bank data
+ */
+setMaterialBank(bank) {
+  this.materialBank = bank;
+  window.EventBus.publish('material-bank:updated', bank);
 }
   /**
  * Set the items list

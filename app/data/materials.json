@@ -1,0 +1,121 @@
+[
+    {
+      "id": "dragon-heartstring",
+      "name": "Dragon Heartstring",
+      "rarity": "Legendary",
+      "description": "The preserved heartstring of an ancient dragon, pulsing with primordial magic.",
+      "price": 0
+    },
+    {
+      "id": "phoenix-feather",
+      "name": "Phoenix Feather",
+      "rarity": "Epic",
+      "description": "A brilliant crimson feather that radiates warmth and rejuvenating energy.",
+      "price": 0
+    },
+    {
+      "id": "moonsilver-ore",
+      "name": "Moonsilver Ore",
+      "rarity": "Epic",
+      "description": "Ore that shimmers with celestial light, mined only during a full moon.",
+      "price": 0
+    },
+    {
+      "id": "arcane-crystal",
+      "name": "Arcane Crystal",
+      "rarity": "Epic",
+      "description": "A perfect crystal formation that amplifies magical energies.",
+      "price": 0
+    },
+    {
+      "id": "thunderwood",
+      "name": "Thunderwood",
+      "rarity": "Rare",
+      "description": "Wood from trees struck by lightning, crackling with latent electrical energy.",
+      "price": 0
+    },
+    {
+      "id": "basilisk-scale",
+      "name": "Basilisk Scale",
+      "rarity": "Rare",
+      "description": "Hard, lustrous scales from the legendary basilisk, resistant to most magic.",
+      "price": 0
+    },
+    {
+      "id": "shadow-leather",
+      "name": "Shadow Leather",
+      "rarity": "Rare",
+      "description": "Leather tanned in darkness that seems to absorb light around it.",
+      "price": 0
+    },
+    {
+      "id": "mithril-ore",
+      "name": "Mithril Ore",
+      "rarity": "Uncommon",
+      "description": "Lightweight but incredibly strong metal ore with a silvery sheen.",
+      "price": 0
+    },
+    {
+      "id": "elvish-silk",
+      "name": "Elvish Silk",
+      "rarity": "Uncommon",
+      "description": "Impossibly soft fabric with a subtle shimmer, woven with ancient elven techniques.",
+      "price": 0
+    },
+    {
+      "id": "frost-lotus",
+      "name": "Frost Lotus",
+      "rarity": "Uncommon",
+      "description": "A flower that only blooms in extreme cold, preserving its magical properties when picked.",
+      "price": 0
+    },
+    {
+      "id": "ironbark",
+      "name": "Ironbark",
+      "rarity": "Uncommon",
+      "description": "Wood as strong as iron, harvested from ancient forest sentinels.",
+      "price": 0
+    },
+    {
+      "id": "troll-hide",
+      "name": "Troll Hide",
+      "rarity": "Uncommon",
+      "description": "Thick, regenerative leather with natural resistance to acid.",
+      "price": 0
+    },
+    {
+      "id": "copper-ore",
+      "name": "Copper Ore",
+      "rarity": "Common",
+      "description": "Common metal ore found in most regions, essential for basic crafting.",
+      "price": 0
+    },
+    {
+      "id": "iron-ore",
+      "name": "Iron Ore",
+      "rarity": "Common",
+      "description": "Sturdy metal ore used in basic equipment and construction.",
+      "price": 0
+    },
+    {
+      "id": "oak-wood",
+      "name": "Oak Wood",
+      "rarity": "Common",
+      "description": "Strong, reliable wood perfect for crafting sturdy items.",
+      "price": 0
+    },
+    {
+      "id": "cowhide",
+      "name": "Cowhide",
+      "rarity": "Common",
+      "description": "Standard leather material used in basic armor and accessories.",
+      "price": 0
+    },
+    {
+      "id": "firebloom",
+      "name": "Firebloom",
+      "rarity": "Common",
+      "description": "A bright red herb that retains heat long after being picked.",
+      "price": 0
+    }
+  ]
