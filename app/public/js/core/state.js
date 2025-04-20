@@ -43,6 +43,15 @@ setMaterialBank(bank) {
   this.materialBank = bank;
   window.EventBus.publish('material-bank:updated', bank);
 }
+  
+  /**
+ * Set the recipes list
+ * @param {Array} recipes - List of recipes
+ */
+setRecipes(recipes) {
+  this.recipes = recipes;
+  window.EventBus.publish('recipes:loaded', recipes);
+}
   /**
  * Set the items list
  * @param {Array} items - List of items

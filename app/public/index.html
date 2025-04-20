@@ -103,6 +103,9 @@
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="material-tab" data-bs-toggle="tab" data-bs-target="#material" type="button" role="tab" aria-controls="material" aria-selected="false">Material Bank</button>
             </li>
+            <li class="nav-item" role="presentation">
+  <button class="nav-link" id="crafting-tab" data-bs-toggle="tab" data-bs-target="#crafting" type="button" role="tab" aria-controls="crafting" aria-selected="false">Crafting</button>
+</li>
           </ul>
         </div>
         <div class="card-body">
@@ -298,6 +301,15 @@
 <div class="tab-pane fade" id="material" role="tabpanel" aria-labelledby="material-tab">
   <h4>Material Bank</h4>
   <div id="material-bank"></div>
+</div>   
+<div class="tab-pane fade" id="crafting" role="tabpanel" aria-labelledby="crafting-tab">
+  <h4>Crafting</h4>
+  <p>Create items using materials from your material bank.</p>
+  
+  <div id="recipes-list">
+    <!-- Recipes will be shown here -->
+    <div class="alert alert-info">Loading recipes...</div>
+  </div>
 </div>            
 <!-- Rotation Tab -->
 <div class="tab-pane fade" id="rotation" role="tabpanel" aria-labelledby="rotation-tab">
@@ -801,6 +813,7 @@
   <script src="js/ui/item-ui.js"></script> <!-- NEW LINE -->
   <script src="js/ui/adventure-ui.js"></script>
   <script src="js/ui/material-ui.js"></script>
+  <script src="js/ui/crafting-ui.js"></script>
 
 <!-- Controllers -->
 <script src="js/controllers/character-controller.js"></script>
@@ -810,6 +823,7 @@
 <script src="js/controllers/challenge-controller.js"></script> <!-- Make sure this is here -->
   <script src="js/controllers/item-controller.js"></script> <!-- NEW LINE -->
   <script src="js/controllers/adventure-controller.js"></script>
+  <script src="js/controllers/crafting-controller.js"></script>
   
 
 <!-- Authentication -->

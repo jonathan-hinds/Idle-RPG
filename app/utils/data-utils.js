@@ -21,7 +21,8 @@ function ensureDataFiles() {
     'adventure-config.json',
     'adventure-events.json',
     'materials.json',       // Add this line
-    'material-banks.json'   // Add this line
+    'material-banks.json',   // Add this line
+    'recipes.json'
   ];
   
   dataFiles.forEach(file => {

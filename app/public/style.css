@@ -67,6 +67,51 @@ header h1 {
   transform: translateY(-3px);
 }
 
+/* Recipe card styles */
+.recipe-card {
+  height: 100%;
+  transition: transform 0.2s;
+}
+
+.recipe-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.recipe-card.disabled {
+  opacity: 0.7;
+}
+
+.recipe-materials {
+  font-size: 0.85rem;
+  margin-bottom: 15px;
+}
+
+.recipe-material {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+
+.recipe-material-name {
+  flex: 1;
+}
+
+.recipe-material-count.insufficient {
+  color: #dc3545;
+}
+
+.recipe-material-count.sufficient {
+  color: #28a745;
+}
+
+.recipe-output {
+  font-weight: bold;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #dee2e6;
+}
+
 /* Character level display - change from circle to rounded rectangle */
 .character-level {
   position: absolute;

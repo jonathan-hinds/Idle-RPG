@@ -28,6 +28,37 @@ class API {
     }
   }
   /**
+ * Get all recipes
+ * @returns {Promise<Array>} List of recipes
+ */
+async getRecipes() {
+  try {
+    const recipes = await this._request('/api/recipes');
+    window.GameState.setRecipes(recipes);
+    return recipes;
+  } catch (error) {
+    console.error("Error fetching recipes:", error);
+    return [];
+  }
+}
+
+/**
+ * Craft an item using a recipe
+ * @param {string} recipeId - Recipe ID
+ * @param {string} characterId - Character ID to add the item to
+ * @returns {Promise<Object>} Result with crafted item and updated material bank
+ */
+async craftItem(recipeId, characterId) {
+  return this._request('/api/recipes/craft', {
+    method: 'POST',
+    body: JSON.stringify({ 
+      recipeId, 
+      playerId: window.GameState.playerId,
+      characterId // Include the character ID
+    })
+  });
+}
+  /**
    * Get authentication status
    * @returns {Promise<Object>} Authentication status
    */

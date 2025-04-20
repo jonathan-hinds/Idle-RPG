@@ -30,6 +30,29 @@ function getPlayerMaterialBank(playerId) {
 }
 
 /**
+ * Update a player's material bank
+ * @param {string} playerId - Player ID
+ * @param {Object} materials - Updated materials object
+ * @returns {Object} Updated material bank
+ */
+function updatePlayerMaterialBank(playerId, materials) {
+  console.log(`Updating material bank for player ${playerId}`, materials);
+  const materialBanks = readDataFile('material-banks.json');
+  const bankIndex = materialBanks.findIndex(bank => bank.playerId === playerId);
+  
+  if (bankIndex === -1) {
+    const newBank = { playerId, materials };
+    materialBanks.push(newBank);
+    writeDataFile('material-banks.json', materialBanks);
+    return newBank;
+  }
+  
+  materialBanks[bankIndex].materials = materials;
+  writeDataFile('material-banks.json', materialBanks);
+  return materialBanks[bankIndex];
+}
+
+/**
  * Add material to player's bank
  * @param {string} playerId - Player ID
  * @param {string} materialId - Material ID to add
@@ -56,5 +79,6 @@ try { readDataFile('material-banks.json'); } catch (error) { writeDataFile('mate
 module.exports = {
   loadMaterials,
   getPlayerMaterialBank,
-  addMaterialToBank
+  addMaterialToBank,
+  updatePlayerMaterialBank
 };

@@ -17,6 +17,7 @@ const PORT = process.env.PORT || 3000;
 const { ensureDataFiles } = require('./utils/data-utils');
 const adventureRoutes = require('./routes/adventures');
 const materialRoutes = require('./routes/materials');
+const recipeRoutes = require('./routes/recipes');
 ensureDataFiles();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -36,6 +37,7 @@ app.use('/api/challenges', challengeRoutes);
 app.use('/api/items', itemRoutes); 
 app.use('/api/adventures', adventureRoutes);
 app.use('/api/materials', materialRoutes);
+app.use('/api/recipes', recipeRoutes);
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ error: 'An internal server error occurred' });

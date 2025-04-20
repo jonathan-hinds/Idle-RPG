@@ -1,0 +1,170 @@
+[
+    {
+      "id": "wand-of-flames-recipe",
+      "name": "Wand of Flames",
+      "category": "Weapons",
+      "materials": [
+        {
+          "id": "thunderwood",
+          "amount": 2
+        },
+        {
+          "id": "firebloom",
+          "amount": 3
+        },
+        {
+          "id": "arcane-crystal",
+          "amount": 1
+        }
+      ],
+      "output": {
+        "id": "wand-of-flames",
+        "type": "weapon"
+      }
+    },
+    {
+      "id": "dragons-crest-recipe",
+      "name": "Dragon's Crest",
+      "category": "Armor",
+      "materials": [
+        {
+          "id": "dragon-heartstring",
+          "amount": 1
+        },
+        {
+          "id": "iron-ore",
+          "amount": 3
+        }
+      ],
+      "output": {
+        "id": "dragons-crest",
+        "type": "armor"
+      }
+    },
+    {
+      "id": "poison-dagger-recipe",
+      "name": "Poison Dagger",
+      "category": "Weapons",
+      "materials": [
+        {
+          "id": "iron-ore",
+          "amount": 2
+        },
+        {
+          "id": "basilisk-scale",
+          "amount": 1
+        }
+      ],
+      "output": {
+        "id": "poison-dagger",
+        "type": "weapon"
+      }
+    },
+    {
+      "id": "wand-of-decay-recipe",
+      "name": "Wand of Decay",
+      "category": "Weapons",
+      "materials": [
+        {
+          "id": "shadow-leather",
+          "amount": 1
+        },
+        {
+          "id": "oak-wood",
+          "amount": 2
+        },
+        {
+          "id": "moonsilver-ore",
+          "amount": 1
+        }
+      ],
+      "output": {
+        "id": "wand-of-decay",
+        "type": "weapon"
+      }
+    },
+    {
+      "id": "stone-skin-recipe",
+      "name": "Stone Skin",
+      "category": "Scrolls",
+      "materials": [
+        {
+          "id": "arcane-crystal",
+          "amount": 1
+        },
+        {
+          "id": "iron-ore",
+          "amount": 2
+        },
+        {
+          "id": "frost-lotus",
+          "amount": 1
+        }
+      ],
+      "output": {
+        "id": "stone-skin",
+        "type": "scroll"
+      }
+    },
+    {
+      "id": "light-leather-trousers-recipe",
+      "name": "Light Leather Trousers",
+      "category": "Armor",
+      "materials": [
+        {
+          "id": "cowhide",
+          "amount": 4
+        },
+        {
+          "id": "elvish-silk",
+          "amount": 1
+        }
+      ],
+      "output": {
+        "id": "light-leather-trousers",
+        "type": "armor"
+      }
+    },
+    {
+      "id": "delightfully-pleasant-hood-recipe",
+      "name": "Delightfully Pleasant Hood",
+      "category": "Armor",
+      "materials": [
+        {
+          "id": "elvish-silk",
+          "amount": 2
+        },
+        {
+          "id": "phoenix-feather",
+          "amount": 1
+        }
+      ],
+      "output": {
+        "id": "delightfully-pleasant-hood",
+        "type": "armor"
+      }
+    },
+    {
+      "id": "skull-crush-warhammer-recipe",
+      "name": "Skull Crush Warhammer",
+      "category": "Weapons",
+      "materials": [
+        {
+          "id": "iron-ore",
+          "amount": 4
+        },
+        {
+          "id": "mithril-ore",
+          "amount": 2
+        },
+        {
+          "id": "troll-hide",
+          "amount": 1
+        }
+      ],
+      "output": {
+        "id": "skull-crush-warhammer",
+        "type": "weapon"
+      }
+    }
+  ]
